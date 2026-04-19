@@ -1,0 +1,4992 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Classroom Noise Monitor</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --color-quiet: #00ff88;
+      --color-moderate: #ffc800;
+      --color-loud: #ff3232;
+      --color-primary: #00d9ff;
+      --color-bg-dark: #1a1a2e;
+      --color-bg-mid: #16213e;
+      --color-text-muted: #8892b0;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, var(--color-bg-dark) 0%, var(--color-bg-mid) 50%, #0f3460 100%);
+      min-height: 100vh;
+      color: white;
+      overflow-x: hidden;
+      transition: background 0.5s ease;
+    }
+
+    body.theme-light {
+      background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 50%, #cbd5e1 100%);
+      color: #1e293b;
+    }
+
+    body.theme-light .controls-panel,
+    body.theme-light .stat-card,
+    body.theme-light .setting-item,
+    body.theme-light .history-chart,
+    body.theme-light .visualizer-container {
+      background: rgba(255, 255, 255, 0.8);
+    }
+
+    body.theme-light .noise-circle {
+      background: radial-gradient(circle, #ffffff 0%, #f1f5f9 100%);
+      box-shadow: 0 0 60px rgba(0, 217, 255, 0.2), 0 10px 40px rgba(0, 0, 0, 0.1);
+    }
+
+    body.theme-light .db-value {
+      background: linear-gradient(180deg, #1e293b 0%, #475569 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    header {
+      text-align: center;
+      padding: 20px 0 30px;
+    }
+
+    .header-controls {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .icon-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      border: none;
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+    }
+
+    .icon-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: scale(1.05);
+    }
+
+    body.theme-light .icon-btn {
+      background: rgba(0, 0, 0, 0.1);
+      color: #1e293b;
+    }
+
+    header h1 {
+      font-size: 2.5rem;
+      background: linear-gradient(90deg, var(--color-primary), var(--color-quiet));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+    }
+
+    header p {
+      color: var(--color-text-muted);
+      font-size: 1.1rem;
+    }
+
+    /* Preset Mode Tabs */
+    .preset-tabs {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 20px 0;
+      flex-wrap: wrap;
+    }
+
+    .preset-tab {
+      padding: 10px 20px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 25px;
+      background: transparent;
+      color: white;
+      cursor: pointer;
+      font-size: 0.95rem;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .preset-tab:hover {
+      border-color: var(--color-primary);
+      background: rgba(0, 217, 255, 0.1);
+    }
+
+    .preset-tab.active {
+      background: linear-gradient(135deg, var(--color-primary), var(--color-quiet));
+      border-color: transparent;
+      color: var(--color-bg-dark);
+      font-weight: 600;
+    }
+
+    body.theme-light .preset-tab {
+      border-color: rgba(0, 0, 0, 0.2);
+      color: #1e293b;
+    }
+
+    .main-display {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 30px;
+      margin-bottom: 40px;
+    }
+
+    /* Noise Level Circle */
+    .noise-circle-container {
+      position: relative;
+      width: 320px;
+      height: 320px;
+    }
+
+    .noise-circle {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--color-bg-dark) 0%, #0d1b2a 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 60px rgba(0, 217, 255, 0.3), inset 0 0 60px rgba(0, 0, 0, 0.5);
+      position: relative;
+      z-index: 2;
+      transition: all 0.4s ease;
+    }
+
+    .noise-circle.quiet {
+      box-shadow: 0 0 80px rgba(0, 255, 136, 0.5), inset 0 0 60px rgba(0, 0, 0, 0.5);
+    }
+
+    .noise-circle.moderate {
+      box-shadow: 0 0 80px rgba(255, 200, 0, 0.5), inset 0 0 60px rgba(0, 0, 0, 0.5);
+    }
+
+    .noise-circle.loud {
+      box-shadow: 0 0 100px rgba(255, 50, 50, 0.7), inset 0 0 60px rgba(0, 0, 0, 0.5);
+      animation: pulse-loud 0.4s ease-in-out infinite;
+    }
+
+    @keyframes pulse-loud {
+
+      0%,
+      100% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.03);
+      }
+    }
+
+    /* Animated Rings */
+    .ring {
+      position: absolute;
+      border-radius: 50%;
+      border: 2px solid rgba(0, 217, 255, 0.3);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      animation: ring-pulse 3s ease-out infinite;
+      pointer-events: none;
+    }
+
+    .ring:nth-child(1) {
+      width: 340px;
+      height: 340px;
+      animation-delay: 0s;
+    }
+
+    .ring:nth-child(2) {
+      width: 380px;
+      height: 380px;
+      animation-delay: 1s;
+    }
+
+    .ring:nth-child(3) {
+      width: 420px;
+      height: 420px;
+      animation-delay: 2s;
+    }
+
+    .noise-circle.quiet~.ring {
+      border-color: rgba(0, 255, 136, 0.3);
+    }
+
+    .noise-circle.moderate~.ring {
+      border-color: rgba(255, 200, 0, 0.3);
+    }
+
+    .noise-circle.loud~.ring {
+      border-color: rgba(255, 50, 50, 0.4);
+    }
+
+    @keyframes ring-pulse {
+      0% {
+        opacity: 0.8;
+        transform: translate(-50%, -50%) scale(0.9);
+      }
+
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(1.2);
+      }
+    }
+
+    /* Progress Ring */
+    .progress-ring {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      z-index: 1;
+    }
+
+    .progress-ring circle {
+      fill: none;
+      stroke-width: 8;
+      stroke-linecap: round;
+      transform: rotate(-90deg);
+      transform-origin: center;
+      transition: stroke-dashoffset 0.3s ease, stroke 0.3s ease;
+    }
+
+    .progress-ring .bg {
+      stroke: rgba(255, 255, 255, 0.1);
+    }
+
+    .progress-ring .progress {
+      stroke: var(--color-quiet);
+      stroke-dasharray: 942;
+      stroke-dashoffset: 942;
+    }
+
+    .db-value {
+      font-size: 4.5rem;
+      font-weight: bold;
+      background: linear-gradient(180deg, #ffffff 0%, #a0a0a0 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+      transition: all 0.2s ease;
+    }
+
+    .db-label {
+      font-size: 1.1rem;
+      color: var(--color-text-muted);
+      margin-top: 5px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .status-text {
+      font-size: 1.6rem;
+      margin-top: 15px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+
+    .status-quiet {
+      color: var(--color-quiet);
+    }
+
+    .status-moderate {
+      color: var(--color-moderate);
+    }
+
+    .status-loud {
+      color: var(--color-loud);
+    }
+
+    /* ===== Animated CSS Noise Creature ===== */
+    .character-container {
+      position: relative;
+      width: 90px;
+      height: 90px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .character { display: none !important; }
+
+    .creature { position: relative; width: 76px; height: 76px; display: flex; align-items: center; justify-content: center; }
+    .creature-body {
+      width: 76px; height: 76px; border-radius: 50%;
+      background: var(--c-body, #00e87a);
+      box-shadow: 0 0 24px var(--c-glow, rgba(0,255,136,0.5));
+      position: relative; transition: background 0.5s ease, box-shadow 0.5s ease, border-radius 0.4s ease;
+      animation: creatureIdle 2.8s ease-in-out infinite;
+    }
+    .creature-body::before {
+      content: ''; position: absolute; top: 12px; left: 14px;
+      width: 22px; height: 14px; background: rgba(255,255,255,0.28);
+      border-radius: 50%; transform: rotate(-30deg);
+    }
+    .creature-eyes { position: absolute; top: 22px; left: 50%; transform: translateX(-50%); display: flex; gap: 16px; }
+    .creature-eye {
+      width: 13px; height: 13px; background: #0a1020; border-radius: 50%;
+      position: relative; transition: all 0.35s ease;
+    }
+    .creature-eye::after { content: ''; position: absolute; top: 2px; left: 2px; width: 5px; height: 5px; background: white; border-radius: 50%; }
+    .creature-mouth {
+      position: absolute; bottom: 17px; left: 50%; transform: translateX(-50%);
+      width: 26px; height: 12px; background: #0a1020;
+      border-radius: 0 0 13px 13px; transition: all 0.4s ease; overflow: hidden;
+    }
+    .creature-blush { position: absolute; width: 13px; height: 7px; background: rgba(255,100,100,0.35); border-radius: 50%; bottom: 20px; opacity: 0; transition: opacity 0.5s ease; }
+    .creature-blush-l { left: 9px; }
+    .creature-blush-r { right: 9px; }
+    .creature-antennae { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; pointer-events: none; }
+    .creature-antenna { width: 3px; height: 13px; background: var(--c-body, #00e87a); border-radius: 2px; transition: background 0.5s ease; transform-origin: bottom center; }
+    .creature-antenna:first-child { transform: rotate(-15deg); }
+    .creature-antenna:last-child  { transform: rotate(15deg); }
+
+    .noise-circle.quiet .creature-body, .noise-circle:not(.monitoring) .creature-body {
+      --c-body: #00e87a; --c-glow: rgba(0,255,136,0.45);
+      animation: creatureIdle 2.8s ease-in-out infinite;
+    }
+    .noise-circle.quiet .creature-blush { opacity: 1; }
+    .noise-circle.quiet .creature-mouth { width: 24px; height: 11px; border-radius: 0 0 12px 12px; }
+    .noise-circle.moderate .creature-body {
+      --c-body: #ffc800; --c-glow: rgba(255,200,0,0.5);
+      border-radius: 46% 54% 48% 52%; animation: creatureWary 1.4s ease-in-out infinite;
+    }
+    .noise-circle.moderate .creature-eye { height: 10px; border-radius: 5px; }
+    .noise-circle.moderate .creature-mouth { width: 28px; height: 7px; border-radius: 3px; bottom: 14px; }
+    .noise-circle.loud .creature-body {
+      --c-body: #ff3232; --c-glow: rgba(255,50,50,0.65);
+      border-radius: 42% 58% 44% 56%; animation: creatureScream 0.28s ease-in-out infinite;
+    }
+    .noise-circle.loud .creature-eye { height: 16px; border-radius: 50%; }
+    .noise-circle.loud .creature-mouth { width: 38px; height: 22px; border-radius: 0 0 19px 19px; bottom: 10px; }
+    .noise-circle.loud .creature-antenna:first-child { animation: antennaL 0.2s ease-in-out infinite; }
+    .noise-circle.loud .creature-antenna:last-child  { animation: antennaR 0.2s ease-in-out infinite; }
+
+    @keyframes creatureIdle  { 0%,100%{transform:scale(1);border-radius:50%;} 50%{transform:scale(1.05) scaleY(1.03);border-radius:48% 52% 50% 50%;} }
+    @keyframes creatureWary  { 0%,100%{transform:scale(1);} 50%{transform:scale(1.07) rotate(2deg);} }
+    @keyframes creatureScream { 0%,100%{transform:scale(1) rotate(0);border-radius:42% 58% 44% 56%;} 25%{transform:scale(1.09) rotate(-3deg);border-radius:54% 46% 58% 42%;} 75%{transform:scale(1.06) rotate(3deg);border-radius:44% 56% 46% 54%;} }
+    @keyframes antennaL { 0%,100%{transform:rotate(-15deg);} 50%{transform:rotate(-38deg);} }
+    @keyframes antennaR { 0%,100%{transform:rotate(15deg);}  50%{transform:rotate(38deg);}  }
+    @keyframes shake { 0%,100%{transform:translateX(0) rotate(0);} 25%{transform:translateX(-8px) rotate(-5deg);} 75%{transform:translateX(8px) rotate(5deg);} }
+
+    /* ===== Projector / Wall Display Mode ===== */
+    .projector-overlay {
+      position: fixed; inset: 0; z-index: 8000; background: #07071a;
+      display: none; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 40px;
+    }
+    .projector-overlay.active { display: flex; }
+    .proj-exit {
+      position: fixed; top: 18px; right: 22px;
+      padding: 8px 18px; border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.07);
+      color: rgba(255,255,255,0.5); cursor: pointer; font-size: 0.8rem; font-weight: 600;
+      transition: all 0.2s; z-index: 8001;
+    }
+    .proj-exit:hover { color: white; background: rgba(255,255,255,0.13); }
+    .proj-class { font-size: 1.5rem; font-weight: 700; color: rgba(255,255,255,0.35); letter-spacing: 1px; }
+    .proj-creature-body {
+      width: 200px; height: 200px; border-radius: 50%;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+      position: relative; transition: all 0.5s ease;
+    }
+    .proj-creature-body::before {
+      content: ''; position: absolute; top: 26px; left: 30px;
+      width: 44px; height: 24px; background: rgba(255,255,255,0.2); border-radius: 50%; transform: rotate(-30deg);
+    }
+    .proj-creature-body.quiet    { background: radial-gradient(circle at 40% 38%,rgba(255,255,255,.12),transparent 58%), #00e87a; box-shadow: 0 0 100px rgba(0,255,136,.55), 0 0 220px rgba(0,255,136,.2); animation: creatureIdle 2.8s ease-in-out infinite; }
+    .proj-creature-body.moderate { background: radial-gradient(circle at 40% 38%,rgba(255,255,255,.12),transparent 58%), #ffc800; box-shadow: 0 0 100px rgba(255,200,0,.55), 0 0 220px rgba(255,200,0,.2); animation: creatureWary 1.4s ease-in-out infinite; }
+    .proj-creature-body.loud     { background: radial-gradient(circle at 40% 38%,rgba(255,255,255,.12),transparent 58%), #ff3232; box-shadow: 0 0 120px rgba(255,50,50,.7), 0 0 260px rgba(255,50,50,.25); animation: creatureScream 0.28s ease-in-out infinite; }
+    .proj-eyes { display: flex; gap: 28px; }
+    .proj-eye { width: 26px; height: 26px; background: rgba(8,8,28,.9); border-radius: 50%; position: relative; transition: all 0.3s ease; }
+    .proj-eye::after { content:''; position:absolute; top:5px; left:5px; width:9px; height:9px; background:white; border-radius:50%; opacity:.85; }
+    .proj-creature-body.moderate .proj-eye { height: 20px; border-radius: 5px; }
+    .proj-creature-body.loud    .proj-eye { height: 33px; }
+    .proj-mouth { width: 52px; height: 24px; background: rgba(8,8,28,.9); border-radius: 0 0 26px 26px; transition: all 0.4s ease; }
+    .proj-creature-body.moderate .proj-mouth { width: 52px; height: 13px; border-radius: 6px; }
+    .proj-creature-body.loud    .proj-mouth { width: 78px; height: 44px; border-radius: 0 0 39px 39px; }
+    .proj-db { font-size: 9rem; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1; transition: color 0.4s ease; }
+    .proj-db.quiet    { color: var(--color-quiet); }
+    .proj-db.moderate { color: var(--color-moderate); }
+    .proj-db.loud     { color: var(--color-loud); }
+    .proj-db span { font-size: 2rem; font-weight: 400; opacity: .45; margin-left: 8px; }
+    .proj-status { font-size: 2.6rem; font-weight: 700; letter-spacing: 1px; transition: color 0.4s ease; }
+    .proj-status.quiet    { color: var(--color-quiet); }
+    .proj-status.moderate { color: var(--color-moderate); }
+    .proj-status.loud     { color: var(--color-loud); }
+    .proj-score-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; width: min(680px, 86vw); margin-top: 6px; }
+    .proj-score-meta { display: flex; justify-content: space-between; width: 100%; font-size: 0.78rem; color: rgba(255,255,255,.35); text-transform: uppercase; letter-spacing: 1.5px; }
+    .proj-score-track { width: 100%; height: 20px; background: rgba(255,255,255,.06); border-radius: 10px; overflow: hidden; }
+    .proj-score-fill { height: 100%; border-radius: 10px; background: linear-gradient(90deg, var(--color-primary), var(--color-quiet)); transition: width 1.2s ease, background 0.5s ease; }
+    .proj-stars { font-size: 2.4rem; letter-spacing: 8px; }
+    .proj-timer { font-size: 1.4rem; font-weight: 800; color: var(--color-primary); font-variant-numeric: tabular-nums; display: none; }
+    .proj-timer.show { display: block; }
+
+    /* ===== Calibration Wizard ===== */
+    .cal-modal {
+      background: linear-gradient(135deg, #0d1b2a, #1a1a2e);
+      border-radius: 24px; padding: 0; overflow: hidden;
+      max-width: 460px; width: 100%;
+      border: 1px solid rgba(255,255,255,0.1);
+      transform: scale(0.9) translateY(20px); transition: transform 0.3s ease;
+    }
+    .modal-overlay.active .cal-modal { transform: scale(1) translateY(0); }
+    .cal-head { padding: 26px 30px 18px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+    .cal-head h2 { font-size: 1.3rem; margin-bottom: 5px; }
+    .cal-head p  { color: var(--color-text-muted); font-size: 0.84rem; line-height: 1.5; }
+    .cal-body { padding: 22px 30px 26px; }
+    .cal-step { display: none; }
+    .cal-step.active { display: block; }
+    .cal-live { font-size: 3.2rem; font-weight: 900; font-variant-numeric: tabular-nums; text-align: center; color: var(--color-primary); margin: 14px 0 4px; }
+    .cal-live-label { text-align: center; color: var(--color-text-muted); font-size: 0.8rem; margin-bottom: 16px; }
+    .cal-bar { width:100%; height:12px; background:rgba(255,255,255,0.07); border-radius:6px; overflow:hidden; margin: 12px 0; }
+    .cal-bar-fill { height:100%; border-radius:6px; background:linear-gradient(90deg,var(--color-primary),var(--color-quiet)); transition:width 0.1s linear; }
+    .cal-ring-wrap { display:flex; justify-content:center; margin-bottom:16px; }
+    .cal-ring { position:relative; width:72px; height:72px; }
+    .cal-ring svg { width:100%; height:100%; transform:rotate(-90deg); }
+    .cal-ring-num { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:1.6rem; font-weight:900; color:var(--color-primary); }
+    .cal-result-row { display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid rgba(255,255,255,0.06); font-size:0.86rem; }
+    .cal-result-row:last-child { border:none; }
+    .cal-rl { color:var(--color-text-muted); }
+    .cal-rv { font-weight:700; color:var(--color-primary); }
+    .cal-tip { background:rgba(0,217,255,0.07); border:1px solid rgba(0,217,255,0.15); border-radius:12px; padding:12px 16px; font-size:0.8rem; color:#ccd6f6; line-height:1.55; margin-bottom:16px; }
+    .cal-btns { display:flex; gap:10px; justify-content:flex-end; margin-top:20px; }
+    .cal-btn { padding:10px 22px; border-radius:18px; cursor:pointer; font-weight:600; font-size:0.88rem; transition:all 0.2s; }
+    .cal-btn.primary { background:linear-gradient(135deg,var(--color-primary),var(--color-quiet)); color:var(--color-bg-dark); border:none; }
+    .cal-btn.secondary { background:rgba(255,255,255,0.08); color:white; border:1px solid rgba(255,255,255,0.15); }
+    .cal-btn:hover { transform:scale(1.04); }
+    .calibrate-btn {
+      display:inline-flex; align-items:center; gap:7px;
+      padding:9px 18px; border-radius:14px;
+      border:1px solid rgba(0,217,255,0.3); background:rgba(0,217,255,0.07);
+      color:var(--color-primary); cursor:pointer; font-size:0.84rem;
+      font-weight:600; margin-top:14px; transition:all 0.2s;
+    }
+    .calibrate-btn:hover { background:rgba(0,217,255,0.14); }
+
+    /* ===== Escalating Alert System ===== */
+    .alert-bar { position:fixed; top:0; left:0; right:0; height:5px; z-index:7000; opacity:0; pointer-events:none; transition:opacity 0.3s ease; }
+    .alert-bar.warn     { opacity:1; background:var(--color-moderate); animation:alertPulse 0.9s ease-in-out infinite; }
+    .alert-bar.alarm    { opacity:1; background:var(--color-loud); animation:alertPulse 0.45s ease-in-out infinite; }
+    .alert-bar.critical { opacity:1; background:var(--color-loud); animation:alertStrobe 0.2s step-end infinite; }
+    @keyframes alertPulse  { 0%,100%{opacity:.5;} 50%{opacity:1;} }
+    @keyframes alertStrobe { 0%,49%{opacity:1;} 50%,100%{opacity:.15;} }
+    .alert-stage-badge { position:fixed; top:14px; left:50%; transform:translateX(-50%); z-index:7001; padding:7px 20px; border-radius:20px; font-weight:700; font-size:0.9rem; display:none; align-items:center; gap:8px; }
+    .alert-stage-badge.show { display:flex; animation:toastIn 0.3s ease; }
+    .alert-stage-badge.warn     { background:linear-gradient(135deg,#ff9500,#ffc800); color:#1a1a2e; }
+    .alert-stage-badge.alarm    { background:linear-gradient(135deg,#ff3232,#ff6b35); color:white; }
+    .alert-stage-badge.critical { background:#ff0000; color:white; animation:alertStrobe 0.3s step-end infinite,toastIn 0.3s ease; }
+
+    /* ===== Weekly Grade Chart ===== */
+    .grade-chart-section { margin-top:20px; }
+    .grade-chart-title { font-size:0.78rem; text-transform:uppercase; letter-spacing:1.2px; color:var(--color-text-muted); margin-bottom:10px; }
+    .grade-chart { display:flex; align-items:flex-end; gap:8px; height:72px; }
+    .grade-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; height:100%; justify-content:flex-end; }
+    .grade-col-bar { width:100%; border-radius:5px 5px 0 0; min-height:4px; transition:height 0.5s ease; }
+    .grade-col-bar.ga { background:linear-gradient(to top,#00c96b,#00ff88); }
+    .grade-col-bar.gb { background:linear-gradient(to top,#00a8cc,#00d9ff); }
+    .grade-col-bar.gc { background:linear-gradient(to top,#cc9000,#ffc800); }
+    .grade-col-bar.gd { background:linear-gradient(to top,#cc4400,#ff6b35); }
+    .grade-col-bar.gf { background:linear-gradient(to top,#aa0000,#ff3232); }
+    .grade-col-bar.ge { background:rgba(255,255,255,0.06); }
+    .grade-col-lbl { font-size:0.7rem; font-weight:700; color:var(--color-text-muted); }
+
+    /* Sound Wave Animation */
+    .sound-waves {
+      position: absolute;
+      width: 140px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      bottom: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .noise-circle.monitoring .sound-waves {
+      opacity: 1;
+    }
+
+    .sound-wave {
+      width: 4px;
+      background: linear-gradient(to top, var(--color-quiet), var(--color-primary));
+      border-radius: 2px;
+      animation: wave 0.8s ease-in-out infinite;
+    }
+
+    .sound-wave:nth-child(1) {
+      height: 15px;
+      animation-delay: 0s;
+    }
+
+    .sound-wave:nth-child(2) {
+      height: 25px;
+      animation-delay: 0.1s;
+    }
+
+    .sound-wave:nth-child(3) {
+      height: 35px;
+      animation-delay: 0.2s;
+    }
+
+    .sound-wave:nth-child(4) {
+      height: 25px;
+      animation-delay: 0.3s;
+    }
+
+    .sound-wave:nth-child(5) {
+      height: 15px;
+      animation-delay: 0.4s;
+    }
+
+    @keyframes wave {
+
+      0%,
+      100% {
+        transform: scaleY(0.5);
+      }
+
+      50% {
+        transform: scaleY(1);
+      }
+    }
+
+    /* Visualizer */
+    .visualizer-wrapper {
+      width: 100%;
+      max-width: 900px;
+      position: relative;
+    }
+
+    .visualizer-hint {
+      text-align: center;
+      font-size: 0.78rem;
+      color: var(--color-text-muted);
+      margin-bottom: 6px;
+      letter-spacing: 0.3px;
+      opacity: 0.75;
+    }
+
+    .visualizer-container {
+      width: 100%;
+      height: 140px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 20px;
+      padding: 15px 20px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 3px;
+      overflow: visible;
+      position: relative;
+      cursor: crosshair;
+    }
+
+    .visualizer-container::before {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 50%;
+      background: linear-gradient(to top, rgba(0, 217, 255, 0.05), transparent);
+      pointer-events: none;
+      border-radius: 0 0 20px 20px;
+    }
+
+    .bar {
+      width: 6px;
+      background: linear-gradient(to top, var(--color-quiet), var(--color-primary), var(--color-loud));
+      border-radius: 3px;
+      transition: height 0.05s ease;
+      min-height: 4px;
+      position: relative;
+      pointer-events: none;
+    }
+
+    .bar::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: white;
+      border-radius: 3px;
+      opacity: 0.8;
+    }
+
+    /* Target level line on visualizer */
+    .target-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: rgba(255, 255, 255, 0.9);
+      pointer-events: none;
+      z-index: 10;
+      transition: top 0.15s ease;
+    }
+
+    .target-line::before {
+      /* full-width subtle glow band */
+      content: '';
+      position: absolute;
+      left: 0; right: 0;
+      top: -3px; bottom: -3px;
+      background: rgba(255, 255, 255, 0.12);
+      pointer-events: none;
+    }
+
+    .target-handle {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(45deg);
+      width: 14px;
+      height: 14px;
+      background: white;
+      border: 2.5px solid var(--color-primary);
+      box-shadow: 0 0 10px rgba(0, 217, 255, 0.8), 0 0 20px rgba(0, 217, 255, 0.4);
+      pointer-events: none;
+      border-radius: 2px;
+    }
+
+    .target-label {
+      position: absolute;
+      top: 50%;
+      right: 10px;
+      transform: translateY(-50%);
+      background: rgba(0, 10, 30, 0.85);
+      border: 1px solid rgba(0, 217, 255, 0.5);
+      color: white;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    .target-label-left {
+      position: absolute;
+      top: 50%;
+      left: 10px;
+      transform: translateY(-50%);
+      color: rgba(255,255,255,0.55);
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      pointer-events: none;
+    }
+
+    /* Average line on visualizer */
+    .avg-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 1px;
+      pointer-events: none;
+      z-index: 9;
+      transition: top 0.5s ease;
+    }
+
+    .avg-line::after {
+      content: '';
+      position: absolute;
+      left: 0; right: 0; top: 0; bottom: 0;
+      background: rgba(255, 200, 0, 0.55);
+      box-shadow: 0 0 6px rgba(255, 200, 0, 0.4);
+    }
+
+    .avg-line-label {
+      position: absolute;
+      top: 50%;
+      left: 10px;
+      transform: translateY(-50%);
+      background: rgba(0, 10, 30, 0.8);
+      border: 1px solid rgba(255, 200, 0, 0.5);
+      color: var(--color-moderate);
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 5px;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    /* ===== Prominent Average Display ===== */
+    .avg-badge {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      background: rgba(0, 0, 0, 0.28);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      padding: 14px 28px;
+      width: 100%;
+      max-width: 900px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .avg-badge::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, rgba(0,217,255,0.04) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .avg-badge-icon {
+      font-size: 1.8rem;
+      flex-shrink: 0;
+    }
+
+    .avg-badge-content {
+      flex: 1;
+    }
+
+    .avg-badge-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--color-text-muted);
+      margin-bottom: 2px;
+    }
+
+    .avg-badge-row {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .avg-badge-value {
+      font-size: 2.6rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--color-primary), var(--color-quiet));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .avg-badge-unit {
+      font-size: 1rem;
+      color: var(--color-text-muted);
+      font-weight: 500;
+    }
+
+    .avg-badge-sub {
+      font-size: 0.78rem;
+      color: var(--color-text-muted);
+      margin-top: 3px;
+    }
+
+    .avg-target-gap {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      flex-shrink: 0;
+      gap: 4px;
+    }
+
+    .avg-target-gap-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--color-text-muted);
+    }
+
+    .avg-target-gap-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      transition: color 0.3s ease;
+    }
+
+    .gap-under  { color: var(--color-quiet); }
+    .gap-over   { color: var(--color-loud); }
+    .gap-on     { color: var(--color-moderate); }
+
+    .avg-bar-track {
+      flex: 1;
+      height: 6px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+
+    .avg-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: linear-gradient(90deg, var(--color-primary), var(--color-quiet));
+      transition: width 0.4s ease;
+      max-width: 100%;
+    }
+
+    /* Stats Row */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 15px;
+      margin-top: 30px;
+    }
+
+    .stat-card {
+      background: rgba(0, 0, 0, 0.25);
+      padding: 20px 15px;
+      border-radius: 16px;
+      text-align: center;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .stat-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    .stat-icon {
+      font-size: 1.5rem;
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: bold;
+      background: linear-gradient(135deg, var(--color-primary), var(--color-quiet));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .stat-label {
+      color: var(--color-text-muted);
+      font-size: 0.85rem;
+      margin-top: 5px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* Controls Panel */
+    .controls-panel {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      border-radius: 24px;
+      padding: 30px;
+      margin-top: 30px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .controls-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 25px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    .controls-header h2 {
+      font-size: 1.4rem;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .start-btn {
+      padding: 14px 35px;
+      font-size: 1.05rem;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .start-btn.inactive {
+      background: linear-gradient(135deg, var(--color-primary), var(--color-quiet));
+      color: var(--color-bg-dark);
+    }
+
+    .start-btn.active {
+      background: linear-gradient(135deg, var(--color-loud), #ff6b6b);
+      color: white;
+    }
+
+    .start-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 10px 30px rgba(0, 217, 255, 0.3);
+    }
+
+    .reset-btn {
+      padding: 14px 25px;
+      font-size: 1rem;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 50px;
+      cursor: pointer;
+      font-weight: 500;
+      background: transparent;
+      color: white;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .reset-btn:hover {
+      border-color: var(--color-primary);
+      background: rgba(0, 217, 255, 0.1);
+    }
+
+    body.theme-light .reset-btn {
+      border-color: rgba(0, 0, 0, 0.2);
+      color: #1e293b;
+    }
+
+    .settings-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .setting-item {
+      background: rgba(0, 0, 0, 0.2);
+      padding: 20px;
+      border-radius: 16px;
+      transition: all 0.3s ease;
+    }
+
+    .setting-item:hover {
+      background: rgba(0, 0, 0, 0.3);
+    }
+
+    .setting-item label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 15px;
+      font-size: 0.95rem;
+      color: #ccd6f6;
+      font-weight: 500;
+    }
+
+    .setting-item input[type="range"] {
+      width: 100%;
+      height: 8px;
+      border-radius: 4px;
+      background: var(--color-bg-dark);
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    .setting-item input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--color-primary), var(--color-quiet));
+      cursor: pointer;
+      box-shadow: 0 0 15px rgba(0, 217, 255, 0.5);
+      transition: transform 0.2s ease;
+    }
+
+    .setting-item input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+
+    .value-display {
+      text-align: center;
+      font-size: 1.4rem;
+      font-weight: bold;
+      color: var(--color-primary);
+      margin-top: 12px;
+    }
+
+    .threshold-indicators {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+      font-size: 0.8rem;
+      color: var(--color-text-muted);
+    }
+
+    /* Toggle Switch */
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 56px;
+      height: 28px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: var(--color-bg-dark);
+      transition: 0.4s;
+      border-radius: 28px;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 4px;
+      bottom: 4px;
+      background-color: var(--color-text-muted);
+      transition: 0.4s;
+      border-radius: 50%;
+    }
+
+    .toggle-switch input:checked+.toggle-slider {
+      background: linear-gradient(135deg, var(--color-primary), var(--color-quiet));
+    }
+
+    .toggle-switch input:checked+.toggle-slider:before {
+      transform: translateX(28px);
+      background-color: white;
+    }
+
+    /* History Chart */
+    .history-section {
+      margin-top: 30px;
+    }
+
+    .history-section h3 {
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.1rem;
+    }
+
+    .history-chart {
+      width: 100%;
+      height: 130px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .history-canvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Alert Overlay */
+    .alert-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(circle, rgba(255, 50, 50, 0.3) 0%, rgba(255, 50, 50, 0.1) 100%);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      z-index: 100;
+    }
+
+    .alert-overlay.active {
+      opacity: 1;
+      animation: flash 0.4s ease-in-out infinite;
+    }
+
+    @keyframes flash {
+
+      0%,
+      100% {
+        opacity: 0.3;
+      }
+
+      50% {
+        opacity: 0.6;
+      }
+    }
+
+    /* Permission Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+      padding: 20px;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal {
+      background: linear-gradient(135deg, var(--color-bg-dark), var(--color-bg-mid));
+      padding: 40px;
+      border-radius: 24px;
+      text-align: center;
+      max-width: 420px;
+      width: 100%;
+      transform: scale(0.9) translateY(20px);
+      transition: transform 0.3s ease;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .modal-overlay.active .modal {
+      transform: scale(1) translateY(0);
+    }
+
+    .modal-icon {
+      font-size: 4rem;
+      margin-bottom: 20px;
+      display: block;
+    }
+
+    .modal h2 {
+      margin-bottom: 15px;
+      font-size: 1.5rem;
+    }
+
+    .modal p {
+      color: var(--color-text-muted);
+      margin-bottom: 25px;
+      line-height: 1.6;
+    }
+
+    .modal-btns {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .modal-btn {
+      padding: 14px 28px;
+      border: none;
+      border-radius: 25px;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+
+    .modal-btn:hover {
+      transform: scale(1.05);
+    }
+
+    .modal-btn.primary {
+      background: linear-gradient(135deg, var(--color-primary), var(--color-quiet));
+      color: var(--color-bg-dark);
+    }
+
+    .modal-btn.secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    /* Fullscreen Mode */
+    body.fullscreen {
+      overflow: hidden;
+    }
+
+    body.fullscreen .container {
+      max-width: 100%;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 40px;
+    }
+
+    body.fullscreen header {
+      padding: 10px 0;
+    }
+
+    body.fullscreen .controls-panel,
+    body.fullscreen .stats-row,
+    body.fullscreen .preset-tabs {
+      display: none;
+    }
+
+    body.fullscreen .noise-circle-container {
+      width: 450px;
+      height: 450px;
+    }
+
+    body.fullscreen .db-value {
+      font-size: 7rem;
+    }
+
+    body.fullscreen .status-text {
+      font-size: 2.5rem;
+    }
+
+    body.fullscreen .character {
+      font-size: 5.5rem;
+    }
+
+    body.fullscreen .visualizer-container {
+      max-width: 100%;
+      height: 180px;
+    }
+
+    body.fullscreen .ring:nth-child(1) {
+      width: 480px;
+      height: 480px;
+    }
+
+    body.fullscreen .ring:nth-child(2) {
+      width: 530px;
+      height: 530px;
+    }
+
+    body.fullscreen .ring:nth-child(3) {
+      width: 580px;
+      height: 580px;
+    }
+
+    /* SVG Icons */
+    .icon {
+      width: 22px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      header h1 {
+        font-size: 1.7rem;
+      }
+
+      .noise-circle-container {
+        width: 260px;
+        height: 260px;
+      }
+
+      .ring:nth-child(1) {
+        width: 280px;
+        height: 280px;
+      }
+
+      .ring:nth-child(2) {
+        width: 310px;
+        height: 310px;
+      }
+
+      .ring:nth-child(3) {
+        width: 340px;
+        height: 340px;
+      }
+
+      .db-value {
+        font-size: 3.2rem;
+      }
+
+      .character {
+        font-size: 3rem;
+      }
+
+      .controls-panel {
+        padding: 20px;
+      }
+
+      .settings-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .preset-tab {
+        padding: 8px 15px;
+        font-size: 0.85rem;
+      }
+
+      body.fullscreen .noise-circle-container {
+        width: 280px;
+        height: 280px;
+      }
+
+      body.fullscreen .db-value {
+        font-size: 4rem;
+      }
+    }
+
+    /* Tooltip */
+    .tooltip {
+      position: relative;
+    }
+
+    .tooltip::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.9);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      white-space: nowrap;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.2s ease;
+      pointer-events: none;
+      margin-bottom: 8px;
+    }
+
+    .tooltip:hover::after {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    /* Quiet Challenge Timer */
+    .challenge-section {
+      margin-top: 25px;
+      padding: 20px;
+      background: rgba(0, 255, 136, 0.1);
+      border-radius: 16px;
+      border: 1px solid rgba(0, 255, 136, 0.2);
+      display: none;
+    }
+
+    .challenge-section.active {
+      display: block;
+    }
+
+    .challenge-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 15px;
+    }
+
+    .challenge-header h3 {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--color-quiet);
+    }
+
+    .challenge-timer {
+      font-size: 2.5rem;
+      font-weight: bold;
+      text-align: center;
+      color: var(--color-quiet);
+    }
+
+    .challenge-progress {
+      width: 100%;
+      height: 8px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 4px;
+      margin-top: 15px;
+      overflow: hidden;
+    }
+
+    .challenge-progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--color-quiet), var(--color-primary));
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+
+    .challenge-btns {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+      justify-content: center;
+    }
+
+    .challenge-btn {
+      padding: 10px 20px;
+      border-radius: 20px;
+      border: none;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    .challenge-btn.start {
+      background: var(--color-quiet);
+      color: var(--color-bg-dark);
+    }
+
+    .challenge-btn.cancel {
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+    }
+
+    .challenge-duration {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 15px;
+    }
+
+    .duration-option {
+      padding: 8px 16px;
+      border-radius: 15px;
+      border: 1px solid rgba(0, 255, 136, 0.3);
+      background: transparent;
+      color: var(--color-quiet);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .duration-option.selected {
+      background: var(--color-quiet);
+      color: var(--color-bg-dark);
+    }
+
+    /* ===== Toast Notifications ===== */
+    .toast-container {
+      position: fixed;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .toast {
+      padding: 16px 28px;
+      border-radius: 16px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: white;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      animation: toastIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+      max-width: 420px;
+      text-align: center;
+    }
+
+    .toast.success {
+      background: linear-gradient(135deg, #00c96b, #00d9ff);
+      color: var(--color-bg-dark);
+    }
+
+    .toast.fail {
+      background: linear-gradient(135deg, #ff3232, #ff6b35);
+    }
+
+    .toast.info {
+      background: linear-gradient(135deg, #16213e, #0f3460);
+      border: 1px solid rgba(0,217,255,0.3);
+    }
+
+    .toast.fadeout {
+      animation: toastOut 0.4s ease forwards;
+    }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(-20px) scale(0.9); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes toastOut {
+      from { opacity: 1; transform: translateY(0) scale(1); }
+      to   { opacity: 0; transform: translateY(-16px) scale(0.92); }
+    }
+
+    /* ===== Star Reward System ===== */
+    .star-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 8px;
+      min-height: 32px;
+    }
+
+    .star {
+      font-size: 1.5rem;
+      opacity: 0.25;
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      filter: grayscale(1);
+      transform: scale(0.8);
+    }
+
+    .star.earned {
+      opacity: 1;
+      filter: none;
+      transform: scale(1.1);
+    }
+
+    .star.pop {
+      animation: starPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes starPop {
+      0%   { transform: scale(1.1); }
+      40%  { transform: scale(1.6); }
+      70%  { transform: scale(0.95); }
+      100% { transform: scale(1.1); }
+    }
+
+    .quiet-streak-label {
+      font-size: 0.78rem;
+      color: var(--color-text-muted);
+      text-align: center;
+      margin-top: 2px;
+      letter-spacing: 0.5px;
+    }
+
+    /* ===== Export / Log ===== */
+    .export-btn {
+      padding: 10px 20px;
+      font-size: 0.9rem;
+      border: 2px solid rgba(0, 217, 255, 0.35);
+      border-radius: 50px;
+      cursor: pointer;
+      font-weight: 500;
+      background: transparent;
+      color: var(--color-primary);
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .export-btn:hover {
+      background: rgba(0, 217, 255, 0.1);
+      border-color: var(--color-primary);
+    }
+
+    body.theme-light .export-btn {
+      color: #0284c7;
+      border-color: rgba(2, 132, 199, 0.35);
+    }
+
+    /* ===== Log Panel ===== */
+    .log-section {
+      margin-top: 20px;
+    }
+
+    .log-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .log-header h3 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 1rem;
+    }
+
+    .log-list {
+      max-height: 160px;
+      overflow-y: auto;
+      background: rgba(0,0,0,0.2);
+      border-radius: 12px;
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255,255,255,0.15) transparent;
+    }
+
+    .log-list::-webkit-scrollbar { width: 5px; }
+    .log-list::-webkit-scrollbar-track { background: transparent; }
+    .log-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+
+    .log-entry {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.82rem;
+      color: #a8b3cc;
+      padding: 3px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .log-entry:last-child { border-bottom: none; }
+
+    .log-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .log-dot.quiet   { background: var(--color-quiet); }
+    .log-dot.moderate { background: var(--color-moderate); }
+    .log-dot.loud    { background: var(--color-loud); }
+
+    .log-time {
+      color: var(--color-text-muted);
+      font-variant-numeric: tabular-nums;
+      min-width: 42px;
+    }
+
+    .log-empty {
+      color: var(--color-text-muted);
+      font-size: 0.85rem;
+      text-align: center;
+      padding: 14px;
+    }
+
+    /* ===== Challenge result banner ===== */
+    .challenge-result {
+      text-align: center;
+      font-size: 1rem;
+      font-weight: 600;
+      margin-top: 10px;
+      min-height: 24px;
+      transition: color 0.3s ease;
+    }
+
+    .challenge-result.success { color: var(--color-quiet); }
+    .challenge-result.fail    { color: var(--color-loud); }
+
+    /* ===== Trend Arrow ===== */
+    .trend-arrow {
+      position: absolute;
+      top: 12px;
+      right: 14px;
+      font-size: 1.4rem;
+      font-weight: 900;
+      opacity: 0;
+      transition: opacity 0.4s ease, color 0.4s ease;
+      pointer-events: none;
+      z-index: 5;
+    }
+    .trend-arrow.visible { opacity: 1; }
+    .trend-up   { color: var(--color-loud); }
+    .trend-down { color: var(--color-quiet); }
+    .trend-flat { color: var(--color-moderate); font-size: 1rem; }
+
+    /* ===== Countdown Timer Mode ===== */
+    .countdown-bar {
+      width: 100%;
+      max-width: 900px;
+      background: rgba(0,0,0,0.28);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 18px 28px;
+      display: none;
+      align-items: center;
+      gap: 20px;
+    }
+    .countdown-bar.active { display: flex; }
+    .countdown-clock {
+      font-size: 3rem;
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+      color: var(--color-primary);
+      letter-spacing: -1px;
+      min-width: 100px;
+    }
+    .countdown-clock.urgent { color: var(--color-loud); animation: pulse-loud 0.6s ease-in-out infinite; }
+    .countdown-content { flex: 1; }
+    .countdown-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--color-text-muted);
+      margin-bottom: 6px;
+    }
+    .countdown-track {
+      width: 100%;
+      height: 8px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .countdown-fill {
+      height: 100%;
+      border-radius: 4px;
+      background: linear-gradient(90deg, var(--color-primary), var(--color-quiet));
+      transition: width 1s linear;
+    }
+    .countdown-end-btn {
+      padding: 10px 20px;
+      border-radius: 20px;
+      border: 1.5px solid rgba(255,255,255,0.2);
+      background: transparent;
+      color: white;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+    .countdown-end-btn:hover { background: rgba(255,255,255,0.1); }
+
+    /* Countdown picker in settings */
+    .countdown-picker {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    .countdown-chip {
+      padding: 7px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(0,217,255,0.3);
+      background: transparent;
+      color: var(--color-primary);
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+    .countdown-chip:hover, .countdown-chip.selected {
+      background: rgba(0,217,255,0.15);
+      border-color: var(--color-primary);
+    }
+    .countdown-start-btn {
+      padding: 8px 18px;
+      border-radius: 14px;
+      border: none;
+      background: linear-gradient(135deg, var(--color-primary), var(--color-quiet));
+      color: var(--color-bg-dark);
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 700;
+      transition: all 0.2s ease;
+    }
+    .countdown-start-btn:hover { transform: scale(1.04); }
+
+    /* ===== Attention Signal ===== */
+    .attention-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(10, 10, 30, 0.97);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .attention-overlay.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .attention-emoji {
+      font-size: 8rem;
+      animation: attentionBounce 0.6s ease-in-out infinite alternate;
+      margin-bottom: 20px;
+    }
+    @keyframes attentionBounce {
+      from { transform: scale(0.95) translateY(0); }
+      to   { transform: scale(1.05) translateY(-10px); }
+    }
+    .attention-text {
+      font-size: 3.5rem;
+      font-weight: 900;
+      background: linear-gradient(90deg, var(--color-primary), var(--color-quiet));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-align: center;
+      padding: 0 20px;
+      margin-bottom: 10px;
+    }
+    .attention-sub {
+      color: var(--color-text-muted);
+      font-size: 1.1rem;
+      margin-bottom: 40px;
+    }
+    .attention-dismiss {
+      padding: 16px 44px;
+      border-radius: 50px;
+      border: none;
+      background: linear-gradient(135deg, var(--color-primary), var(--color-quiet));
+      color: var(--color-bg-dark);
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+    .attention-dismiss:hover { transform: scale(1.06); }
+
+    .proj-btn {
+      padding: 10px 16px;
+      border-radius: 12px;
+      border: 1.5px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.75);
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+    .proj-btn:hover { background: rgba(255,255,255,0.12); color: white; }
+
+    /* Attention button in header */
+    .attention-btn {
+      padding: 10px 18px;
+      border-radius: 12px;
+      border: 1.5px solid rgba(255, 200, 0, 0.4);
+      background: rgba(255, 200, 0, 0.08);
+      color: var(--color-moderate);
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+    .attention-btn:hover {
+      background: rgba(255, 200, 0, 0.18);
+      border-color: var(--color-moderate);
+      transform: scale(1.04);
+    }
+
+    /* ===== Session Report Modal ===== */
+    .report-modal {
+      background: linear-gradient(135deg, var(--color-bg-dark), #0a1628);
+      padding: 0;
+      border-radius: 24px;
+      max-width: 520px;
+      width: 100%;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.1);
+      transform: scale(0.9) translateY(20px);
+      transition: transform 0.3s ease;
+    }
+    .modal-overlay.active .report-modal { transform: scale(1) translateY(0); }
+    .report-header {
+      padding: 28px 32px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .report-grade {
+      width: 72px;
+      height: 72px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.2rem;
+      font-weight: 900;
+      flex-shrink: 0;
+    }
+    .grade-a { background: linear-gradient(135deg, #00ff88, #00d9ff); color: #0a1628; }
+    .grade-b { background: linear-gradient(135deg, #00d9ff, #4fc3f7); color: #0a1628; }
+    .grade-c { background: linear-gradient(135deg, #ffc800, #ff9500); color: #0a1628; }
+    .grade-d { background: linear-gradient(135deg, #ff6b35, #ff3232); color: white; }
+    .grade-f { background: linear-gradient(135deg, #ff3232, #c0392b); color: white; }
+    .report-title-block h2 { font-size: 1.4rem; margin-bottom: 4px; }
+    .report-title-block p { color: var(--color-text-muted); font-size: 0.85rem; }
+    .report-body { padding: 20px 32px 28px; }
+    .report-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .report-stat {
+      background: rgba(255,255,255,0.04);
+      border-radius: 14px;
+      padding: 14px 16px;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .report-stat-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--color-text-muted);
+      margin-bottom: 6px;
+    }
+    .report-stat-value {
+      font-size: 1.6rem;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+    .report-stat-value.good { color: var(--color-quiet); }
+    .report-stat-value.ok   { color: var(--color-moderate); }
+    .report-stat-value.bad  { color: var(--color-loud); }
+    .report-message {
+      background: rgba(0,217,255,0.06);
+      border: 1px solid rgba(0,217,255,0.15);
+      border-radius: 14px;
+      padding: 14px 18px;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      color: #ccd6f6;
+      margin-bottom: 20px;
+    }
+    .report-btns { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+    .report-print-btn {
+      padding: 11px 22px;
+      border-radius: 20px;
+      border: 1.5px solid rgba(255,255,255,0.2);
+      background: transparent;
+      color: white;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+    .report-print-btn:hover { background: rgba(255,255,255,0.08); }
+    .report-close-btn {
+      padding: 11px 22px;
+      border-radius: 20px;
+      border: none;
+      background: linear-gradient(135deg, var(--color-primary), var(--color-quiet));
+      color: var(--color-bg-dark);
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 700;
+      transition: all 0.2s ease;
+    }
+    .report-close-btn:hover { transform: scale(1.04); }
+
+    /* ===== Fullscreen avg overlay ===== */
+    .fullscreen-avg {
+      display: none;
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 18px;
+      padding: 14px 22px;
+      z-index: 200;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 2px;
+    }
+    body.fullscreen .fullscreen-avg { display: flex; }
+    .fs-avg-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 1px; color: var(--color-text-muted); }
+    .fs-avg-value { font-size: 2rem; font-weight: 800; color: var(--color-primary); font-variant-numeric: tabular-nums; }
+    .fs-avg-gap { font-size: 0.8rem; font-weight: 600; }
+
+    /* ===== Settings section for new features ===== */
+    .session-tools {
+      margin-top: 25px;
+      padding: 20px;
+      background: rgba(0,217,255,0.05);
+      border: 1px solid rgba(0,217,255,0.12);
+      border-radius: 16px;
+    }
+    .session-tools h3 {
+      font-size: 1rem;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--color-primary);
+    }
+    .session-tools-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    @media (max-width: 600px) {
+      .session-tools-grid { grid-template-columns: 1fr; }
+      .report-stats { grid-template-columns: 1fr; }
+      .attention-text { font-size: 2.2rem; }
+    }
+    .tool-card {
+      background: rgba(0,0,0,0.2);
+      border-radius: 14px;
+      padding: 16px;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+    .tool-card h4 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #ccd6f6;
+    }
+
+    @media print {
+      body * { visibility: hidden; }
+      #reportPrintArea, #reportPrintArea * { visibility: visible; }
+      #reportPrintArea { position: fixed; inset: 0; padding: 40px; }
+    }
+
+    /* ===== Noise Thermometer ===== */
+    .thermometer-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .thermo-label {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--color-text-muted);
+    }
+    .thermo-tube {
+      width: 36px;
+      height: 240px;
+      background: rgba(0,0,0,0.35);
+      border-radius: 18px;
+      border: 2px solid rgba(255,255,255,0.1);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: flex-end;
+    }
+    .thermo-fill {
+      width: 100%;
+      border-radius: 0 0 18px 18px;
+      background: linear-gradient(to top, var(--color-quiet), var(--color-moderate), var(--color-loud));
+      transition: height 0.25s ease;
+      position: relative;
+    }
+    .thermo-fill::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 4px; right: 4px;
+      height: 6px;
+      background: rgba(255,255,255,0.35);
+      border-radius: 3px;
+    }
+    .thermo-bulb {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.1);
+      background: var(--color-loud);
+      flex-shrink: 0;
+      box-shadow: 0 0 12px rgba(255,50,50,0.5);
+      transition: background 0.4s ease, box-shadow 0.4s ease;
+    }
+    .thermo-tick {
+      position: absolute;
+      right: 0;
+      width: 10px;
+      height: 1px;
+      background: rgba(255,255,255,0.25);
+    }
+    .thermo-tick-label {
+      position: absolute;
+      right: -28px;
+      font-size: 0.58rem;
+      color: var(--color-text-muted);
+      transform: translateY(-50%);
+      font-variant-numeric: tabular-nums;
+    }
+    .thermo-db-readout {
+      font-size: 0.9rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: var(--color-primary);
+    }
+
+    /* Layout: circle + thermometer side by side */
+    .circle-thermo-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 28px;
+      width: 100%;
+    }
+
+    /* ===== Class Name Banner ===== */
+    .class-name-banner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .class-name-display {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--color-primary);
+      cursor: pointer;
+      border-bottom: 1.5px dashed rgba(0,217,255,0.3);
+      transition: border-color 0.2s ease;
+      min-width: 60px;
+      text-align: center;
+    }
+    .class-name-display:hover { border-color: var(--color-primary); }
+    .class-name-input {
+      font-size: 1.3rem;
+      font-weight: 700;
+      background: rgba(0,217,255,0.08);
+      border: 1.5px solid var(--color-primary);
+      border-radius: 10px;
+      color: white;
+      padding: 4px 14px;
+      outline: none;
+      text-align: center;
+      display: none;
+      max-width: 280px;
+    }
+    .class-name-hint {
+      font-size: 0.75rem;
+      color: var(--color-text-muted);
+    }
+
+    /* ===== Session History Panel ===== */
+    .history-panel {
+      margin-top: 25px;
+      padding: 20px;
+      background: rgba(0,0,0,0.2);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 16px;
+    }
+    .history-panel h3 {
+      font-size: 1rem;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--color-primary);
+    }
+    .session-history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .session-history-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      background: rgba(255,255,255,0.03);
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.05);
+      font-size: 0.82rem;
+    }
+    .shi-grade {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      font-weight: 900;
+      flex-shrink: 0;
+    }
+    .shi-info { flex: 1; }
+    .shi-date { color: var(--color-text-muted); font-size: 0.75rem; }
+    .shi-stats { display: flex; gap: 14px; color: var(--color-text-muted); font-size: 0.75rem; }
+    .shi-sparkline {
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+      height: 28px;
+      flex-shrink: 0;
+    }
+    .shi-bar {
+      width: 5px;
+      border-radius: 2px;
+      background: var(--color-primary);
+      opacity: 0.7;
+    }
+    .no-history {
+      color: var(--color-text-muted);
+      font-size: 0.85rem;
+      text-align: center;
+      padding: 10px;
+    }
+
+    /* ===== Achievement Badges ===== */
+    .badges-section {
+      margin-top: 25px;
+      padding: 20px;
+      background: rgba(255,200,0,0.04);
+      border: 1px solid rgba(255,200,0,0.12);
+      border-radius: 16px;
+    }
+    .badges-section h3 {
+      font-size: 1rem;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--color-moderate);
+    }
+    .badges-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .badge {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1.5px solid;
+      min-width: 80px;
+      transition: all 0.3s ease;
+      cursor: default;
+    }
+    .badge.locked {
+      border-color: rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.02);
+      opacity: 0.4;
+      filter: grayscale(1);
+    }
+    .badge.unlocked {
+      border-color: rgba(255,200,0,0.4);
+      background: rgba(255,200,0,0.06);
+      box-shadow: 0 0 14px rgba(255,200,0,0.15);
+    }
+    .badge.unlocked:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(255,200,0,0.25); }
+    .badge-icon { font-size: 1.8rem; }
+    .badge-name { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-text-muted); text-align: center; }
+
+    /* Badge unlock toast */
+    .toast.badge {
+      background: linear-gradient(135deg, #7b2ff7, #e040fb);
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    /* ===== Custom Attention Message ===== */
+    .custom-attention-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .custom-attention-input {
+      flex: 1;
+      background: rgba(0,0,0,0.25);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 10px;
+      color: white;
+      padding: 7px 12px;
+      font-size: 0.85rem;
+      outline: none;
+    }
+    .custom-attention-input:focus { border-color: var(--color-primary); }
+    .custom-attention-send {
+      padding: 7px 14px;
+      border-radius: 10px;
+      border: none;
+      background: linear-gradient(135deg, var(--color-primary), var(--color-quiet));
+      color: var(--color-bg-dark);
+      font-weight: 700;
+      font-size: 0.82rem;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    /* ===== Fullscreen enhancements ===== */
+    .fs-class-name {
+      display: none;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: rgba(255,255,255,0.6);
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    body.fullscreen .fs-class-name { display: block; }
+    body.fullscreen .class-name-banner { display: none; }
+    body.fullscreen .thermometer-wrap { display: none; } /* less clutter in fullscreen */
+    body.fullscreen .avg-badge { display: none; }
+    body.fullscreen .countdown-bar.active {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* ===== Ambient colour mode ===== */
+    body.ambient {
+      transition: background 1s ease;
+    }
+    body.ambient.ambient-quiet {
+      background: linear-gradient(135deg, #0a2e1a 0%, #0d3b22 50%, #0f4429 100%);
+    }
+    body.ambient.ambient-moderate {
+      background: linear-gradient(135deg, #2e1f00 0%, #3b2800 50%, #44300a 100%);
+    }
+    body.ambient.ambient-loud {
+      background: linear-gradient(135deg, #2e0a0a 0%, #3b0d0d 50%, #440f0f 100%);
+    }
+
+    /* Ambient in projector/presentation mode */
+    .projector-overlay {
+      transition: background 1s ease;
+    }
+    .projector-overlay.ambient-quiet {
+      background: linear-gradient(135deg, #071f10 0%, #0a2918 50%, #0d3320 100%);
+    }
+    .projector-overlay.ambient-moderate {
+      background: linear-gradient(135deg, #1e1400 0%, #2a1c00 50%, #332208 100%);
+    }
+    .projector-overlay.ambient-loud {
+      background: linear-gradient(135deg, #1e0505 0%, #2a0808 50%, #330b0b 100%);
+    }
+
+    /* Ambient toggle in header */
+    .ambient-btn {
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1.5px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.05);
+      color: rgba(255,255,255,0.7);
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+    .ambient-btn.on {
+      border-color: var(--color-quiet);
+      color: var(--color-quiet);
+      background: rgba(0,255,136,0.08);
+    }
+    .ambient-btn:hover { background: rgba(255,255,255,0.1); }
+  </style>
+</head>
+
+<body>
+  <div class="alert-overlay" id="alertOverlay"></div>
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Attention Signal Overlay -->
+  <div class="attention-overlay" id="attentionOverlay">
+    <div class="attention-emoji" id="attentionEmoji">🙋</div>
+    <div class="attention-text">Eyes Up Front!</div>
+    <div class="attention-sub">Tap anywhere or press Escape to dismiss</div>
+    <button class="attention-dismiss" onclick="dismissAttention()">Got it ✓</button>
+  </div>
+
+  <!-- Session Report Modal -->
+  <div class="modal-overlay" id="reportModal">
+    <div class="report-modal" id="reportPrintArea">
+      <div class="report-header">
+        <div class="report-grade" id="reportGrade">A</div>
+        <div class="report-title-block">
+          <h2>Session Report</h2>
+          <p id="reportSubtitle">Great job keeping things quiet!</p>
+        </div>
+      </div>
+      <div class="report-body">
+        <div class="report-stats">
+          <div class="report-stat">
+            <div class="report-stat-label">Average Level</div>
+            <div class="report-stat-value" id="rAvg">--</div>
+          </div>
+          <div class="report-stat">
+            <div class="report-stat-label">Peak Level</div>
+            <div class="report-stat-value" id="rPeak">--</div>
+          </div>
+          <div class="report-stat">
+            <div class="report-stat-label">Quiet Time</div>
+            <div class="report-stat-value" id="rQuiet">--</div>
+          </div>
+          <div class="report-stat">
+            <div class="report-stat-label">Noise Alerts</div>
+            <div class="report-stat-value" id="rAlerts">--</div>
+          </div>
+          <div class="report-stat">
+            <div class="report-stat-label">Session Length</div>
+            <div class="report-stat-value" id="rDuration">--</div>
+          </div>
+          <div class="report-stat">
+            <div class="report-stat-label">vs Target</div>
+            <div class="report-stat-value" id="rTarget">--</div>
+          </div>
+        </div>
+        <div class="report-message" id="reportMessage">Complete a monitoring session to see your report.</div>
+        <div class="report-btns">
+          <button class="report-print-btn" onclick="window.print()">🖨️ Print</button>
+          <button class="report-close-btn" onclick="closeReportModal()">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fullscreen average overlay (bottom-right corner) -->
+  <div class="fullscreen-avg" id="fullscreenAvg">
+    <span class="fs-avg-label">Session Avg</span>
+    <span class="fs-avg-value" id="fsAvgValue">--</span>
+    <span class="fs-avg-gap" id="fsAvgGap"></span>
+  </div>
+
+  <!-- Escalating alert elements -->
+  <div class="alert-bar" id="alertBar"></div>
+  <div class="alert-stage-badge" id="alertStageBadge"></div>
+
+  <!-- Projector / Wall Display Mode -->
+  <div class="projector-overlay" id="projectorOverlay">
+    <button class="proj-exit" onclick="closeProjector()">✕ Exit (W)</button>
+    <div class="proj-class" id="projClass"></div>
+    <div class="proj-creature-body quiet" id="projCreature">
+      <div class="proj-eyes">
+        <div class="proj-eye"></div>
+        <div class="proj-eye"></div>
+      </div>
+      <div class="proj-mouth"></div>
+    </div>
+    <div class="proj-db quiet" id="projDb">--<span>dB</span></div>
+    <div class="proj-status quiet" id="projStatus">Ready</div>
+    <div class="proj-score-wrap">
+      <div class="proj-score-meta">
+        <span>Class Score</span>
+        <span id="projScorePct">0%</span>
+      </div>
+      <div class="proj-score-track"><div class="proj-score-fill" id="projScoreFill" style="width:0%"></div></div>
+      <div class="proj-stars" id="projStars">☆☆☆☆☆</div>
+      <div class="proj-timer" id="projTimer"></div>
+    </div>
+  </div>
+
+  <!-- Calibration Wizard Modal -->
+  <div class="modal-overlay" id="calibrationModal">
+    <div class="cal-modal">
+      <div class="cal-head">
+        <h2>🎚️ Room Calibration</h2>
+        <p>Automatically sets thresholds based on your room's ambient noise — takes just 10 seconds.</p>
+      </div>
+      <div class="cal-body">
+        <!-- Step 1: intro -->
+        <div class="cal-step active" id="calStep1">
+          <div class="cal-tip">Make sure the microphone is started, then ask the class to sit quietly. This measures the baseline noise floor of your room.</div>
+          <div class="cal-btns">
+            <button class="cal-btn secondary" onclick="closeCalibration()">Cancel</button>
+            <button class="cal-btn primary" onclick="startCalibration()">▶ Start Measuring</button>
+          </div>
+        </div>
+        <!-- Step 2: measuring -->
+        <div class="cal-step" id="calStep2">
+          <div class="cal-ring-wrap">
+            <div class="cal-ring">
+              <svg viewBox="0 0 72 72"><circle cx="36" cy="36" r="30" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="6"/><circle id="calRingCircle" cx="36" cy="36" r="30" fill="none" stroke="#00d9ff" stroke-width="6" stroke-dasharray="188.5" stroke-dashoffset="188.5" stroke-linecap="round"/></svg>
+              <div class="cal-ring-num" id="calRingNum">10</div>
+            </div>
+          </div>
+          <div class="cal-live" id="calLiveDb">--</div>
+          <div class="cal-live-label">Listening to ambient noise…</div>
+          <div class="cal-bar"><div class="cal-bar-fill" id="calBarFill" style="width:0%"></div></div>
+          <div style="text-align:center;color:var(--color-text-muted);font-size:0.8rem;">Stay quiet! Measuring room baseline…</div>
+        </div>
+        <!-- Step 3: results -->
+        <div class="cal-step" id="calStep3">
+          <div class="cal-tip" id="calResultTip"></div>
+          <div class="cal-result-row"><span class="cal-rl">Room baseline</span><span class="cal-rv" id="calResBaseline">--</span></div>
+          <div class="cal-result-row"><span class="cal-rl">Quiet threshold →</span><span class="cal-rv" id="calResQuiet">--</span></div>
+          <div class="cal-result-row"><span class="cal-rl">Warning threshold →</span><span class="cal-rv" id="calResWarn">--</span></div>
+          <div class="cal-result-row"><span class="cal-rl">Alert threshold →</span><span class="cal-rv" id="calResAlert">--</span></div>
+          <div class="cal-btns">
+            <button class="cal-btn secondary" onclick="closeCalibration()">Discard</button>
+            <button class="cal-btn primary" onclick="applyCalibration()">✓ Apply Thresholds</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-overlay" id="permissionModal">
+    <div class="modal">
+      <span class="modal-icon">🎤</span>
+      <h2>Microphone Access Required</h2>
+      <p>This app needs access to your microphone to monitor classroom noise levels. No audio is recorded or stored -
+        everything stays on your device.</p>
+      <div class="modal-btns">
+        <button class="modal-btn primary" onclick="requestMicrophoneAccess()">Allow Access</button>
+        <button class="modal-btn secondary" onclick="closeModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error Modal -->
+  <div class="modal-overlay" id="errorModal">
+    <div class="modal">
+      <span class="modal-icon">⚠️</span>
+      <h2 id="errorModalTitle">Error</h2>
+      <p id="errorModalMessage" style="white-space: pre-line; text-align: left;"></p>
+      <div class="modal-btns">
+        <button class="modal-btn primary" onclick="closeErrorModal(); showPermissionModal();">Try Again</button>
+        <button class="modal-btn secondary" onclick="closeErrorModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <header>
+      <div class="header-controls">
+        <button class="ambient-btn" id="ambientBtn" onclick="toggleAmbient()" title="Ambient colour mode">🌈 Ambient</button>
+        <button class="proj-btn" onclick="openProjector()" title="Projector mode (W)">📽️ Wall Display</button>
+        <button class="attention-btn tooltip" data-tooltip="Attention Signal (A)" onclick="triggerAttention()">
+          🙋 Attention
+        </button>
+        <button class="icon-btn tooltip" id="themeToggle" data-tooltip="Toggle Theme (T)" onclick="toggleTheme()">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+        </button>
+        <button class="icon-btn tooltip" id="fullscreenBtn" data-tooltip="Fullscreen (F)" onclick="toggleFullscreen()">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <polyline points="9 21 3 21 3 15"></polyline>
+            <line x1="21" y1="3" x2="14" y2="10"></line>
+            <line x1="3" y1="21" x2="10" y2="14"></line>
+          </svg>
+        </button>
+      </div>
+      <h1>
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="url(#headerGrad)" stroke-width="2">
+          <defs>
+            <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#00d9ff" />
+              <stop offset="100%" stop-color="#00ff88" />
+            </linearGradient>
+          </defs>
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+          <line x1="12" y1="19" x2="12" y2="23"></line>
+          <line x1="8" y1="23" x2="16" y2="23"></line>
+        </svg>
+        Classroom Noise Monitor
+      </h1>
+      <div class="class-name-banner">
+        <span class="class-name-display" id="classNameDisplay" onclick="editClassName()" title="Click to set your class name">Click to set class name</span>
+        <input class="class-name-input" id="classNameInput" placeholder="e.g. Room 12 — Period 3" maxlength="40" onblur="saveClassName()" onkeydown="if(event.key==='Enter') saveClassName()">
+      </div>
+      <p>Keep your classroom at the perfect volume level</p>
+      <div class="fs-class-name" id="fsClassName">Classroom Noise Monitor</div>
+    </header>
+
+    <!-- Preset Tabs -->
+    <div class="preset-tabs">
+      <button class="preset-tab active" data-preset="custom" onclick="applyPreset('custom')">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path
+            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+          </path>
+        </svg>
+        Custom
+      </button>
+      <button class="preset-tab" data-preset="library" onclick="applyPreset('library')">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+        </svg>
+        Library
+      </button>
+      <button class="preset-tab" data-preset="groupwork" onclick="applyPreset('groupwork')">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
+        Group Work
+      </button>
+      <button class="preset-tab" data-preset="presentation" onclick="applyPreset('presentation')">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+          <line x1="8" y1="21" x2="16" y2="21"></line>
+          <line x1="12" y1="17" x2="12" y2="21"></line>
+        </svg>
+        Presentation
+      </button>
+      <button class="preset-tab" data-preset="testing" onclick="applyPreset('testing')">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10 9 9 9 8 9"></polyline>
+        </svg>
+        Testing
+      </button>
+    </div>
+
+    <div class="main-display">
+      <!-- Circle + Thermometer row -->
+      <div class="circle-thermo-row">
+        <!-- Noise Thermometer -->
+        <div class="thermometer-wrap">
+          <div class="thermo-label">Level</div>
+          <div style="position:relative; display:flex; align-items:flex-end; gap:6px;">
+            <div class="thermo-tube" id="thermoTube">
+              <div class="thermo-fill" id="thermoFill" style="height:0%"></div>
+            </div>
+            <div id="thermoTicks" style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;"></div>
+          </div>
+          <div class="thermo-bulb" id="thermoBulb"></div>
+          <div class="thermo-db-readout" id="thermoDb">-- dB</div>
+        </div>
+
+        <!-- Noise Level Circle -->
+        <div class="noise-circle-container">
+          <div class="noise-circle" id="noiseCircle">
+            <svg class="progress-ring" viewBox="0 0 320 320">
+              <circle class="bg" cx="160" cy="160" r="150"></circle>
+              <circle class="progress" id="progressCircle" cx="160" cy="160" r="150"></circle>
+            </svg>
+            <div class="character-container">
+              <div class="creature">
+                <div class="creature-body">
+                  <div class="creature-antennae">
+                    <div class="creature-antenna"></div>
+                    <div class="creature-antenna"></div>
+                  </div>
+                  <div class="creature-eyes">
+                    <div class="creature-eye"></div>
+                    <div class="creature-eye"></div>
+                  </div>
+                  <div class="creature-blush creature-blush-l"></div>
+                  <div class="creature-blush creature-blush-r"></div>
+                  <div class="creature-mouth"></div>
+                </div>
+              </div>
+              <span class="character" id="character" style="display:none"></span>
+            </div>
+            <div class="trend-arrow" id="trendArrow"></div>
+            <div class="db-value" id="dbValue">--</div>
+            <div class="db-label">decibels</div>
+            <div class="status-text status-quiet" id="statusText">Ready to Start</div>
+            <div class="star-bar" id="starBar">
+              <span class="star" data-star="1">⭐</span>
+              <span class="star" data-star="2">⭐</span>
+              <span class="star" data-star="3">⭐</span>
+              <span class="star" data-star="4">⭐</span>
+              <span class="star" data-star="5">⭐</span>
+            </div>
+            <div class="sound-waves">
+              <div class="sound-wave"></div>
+              <div class="sound-wave"></div>
+              <div class="sound-wave"></div>
+              <div class="sound-wave"></div>
+              <div class="sound-wave"></div>
+            </div>
+          </div>
+          <div class="ring"></div>
+          <div class="ring"></div>
+          <div class="ring"></div>
+        </div>
+      </div>
+
+      <!-- Visualizer with clickable target line -->
+      <div class="visualizer-wrapper">
+        <div class="visualizer-hint">🎯 Click anywhere on the equalizer to set your target level</div>
+        <div class="visualizer-container" id="visualizer">
+          <!-- Target level line -->
+          <div class="target-line" id="targetLine" style="top: 50%; display: none;">
+            <div class="target-handle"></div>
+            <span class="target-label" id="targetLabel">Target: -- dB</span>
+            <span class="target-label-left">TARGET</span>
+          </div>
+          <!-- Rolling average line -->
+          <div class="avg-line" id="avgLine" style="top: 50%; display: none;">
+            <span class="avg-line-label" id="avgLineLabel">Avg: -- dB</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Countdown Timer Bar -->
+      <div class="countdown-bar" id="countdownBar">
+        <div class="countdown-clock" id="countdownClock">20:00</div>
+        <div class="countdown-content">
+          <div class="countdown-label" id="countdownLabel">Work Period</div>
+          <div class="countdown-track">
+            <div class="countdown-fill" id="countdownFill" style="width:100%"></div>
+          </div>
+        </div>
+        <button class="countdown-end-btn" onclick="endCountdown()">End Early</button>
+      </div>
+
+      <!-- Prominent Average Badge -->
+      <div class="avg-badge" id="avgBadge">
+        <div class="avg-badge-icon">📊</div>
+        <div class="avg-badge-content">
+          <div class="avg-badge-label">Session Average</div>
+          <div class="avg-badge-row">
+            <span class="avg-badge-value" id="avgBadgeValue">--</span>
+            <span class="avg-badge-unit">dB</span>
+          </div>
+          <div class="avg-bar-track">
+            <div class="avg-bar-fill" id="avgBarFill" style="width: 0%"></div>
+          </div>
+          <div class="avg-badge-sub" id="avgBadgeSub">Start monitoring to see your average</div>
+        </div>
+        <div class="avg-target-gap" id="avgTargetGap">
+          <span class="avg-target-gap-label">vs Target</span>
+          <span class="avg-target-gap-value" id="avgGapValue">--</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon">📊</div>
+        <div class="stat-value" id="avgLevel">--</div>
+        <div class="stat-label">Average dB</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📈</div>
+        <div class="stat-value" id="maxLevel">--</div>
+        <div class="stat-label">Peak dB</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🤫</div>
+        <div class="stat-value" id="quietTime">--</div>
+        <div class="stat-label">Quiet Time</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">⚠️</div>
+        <div class="stat-value" id="alertCount">0</div>
+        <div class="stat-label">Alerts</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">⏱️</div>
+        <div class="stat-value" id="sessionTime">0:00</div>
+        <div class="stat-label">Session</div>
+      </div>
+    </div>
+
+    <!-- Controls Panel -->
+    <div class="controls-panel">
+      <div class="controls-header">
+        <h2>
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path
+              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+            </path>
+          </svg>
+          Settings
+        </h2>
+        <div class="btn-group">
+          <button class="reset-btn" onclick="resetStats()">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="1 4 1 10 7 10"></polyline>
+              <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+            </svg>
+            Reset
+          </button>
+          <button class="export-btn" onclick="exportLog()" id="exportBtn">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            Export CSV
+          </button>
+          <button class="export-btn" onclick="showReportModal()" id="reportBtn">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="9" y1="15" x2="15" y2="15"></line>
+              <line x1="9" y1="11" x2="15" y2="11"></line>
+            </svg>
+            Session Report
+          </button>
+          <button class="start-btn inactive" id="startBtn" onclick="toggleMonitoring()">
+            <svg class="icon" viewBox="0 0 24 24" fill="currentColor" id="btnIcon">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            <span id="btnText">Start Monitoring</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="settings-grid">
+        <div class="setting-item">
+          <label>
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+              <line x1="12" y1="19" x2="12" y2="22"></line>
+            </svg>
+            Microphone Sensitivity
+          </label>
+          <input type="range" id="sensitivity" min="0.5" max="3" step="0.1" value="1.5">
+          <div class="value-display" id="sensitivityValue">1.5x</div>
+          <div class="threshold-indicators">
+            <span>Less Sensitive</span>
+            <span>More Sensitive</span>
+          </div>
+          <button class="calibrate-btn" onclick="showCalibration()">🎚️ Auto-Calibrate Room</button>
+        </div>
+
+        <div class="setting-item">
+          <label>
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#00ff88" stroke-width="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            Quiet Threshold (Green)
+          </label>
+          <input type="range" id="quietThreshold" min="20" max="60" step="1" value="40">
+          <div class="value-display" id="quietValue">40 dB</div>
+          <div class="threshold-indicators">
+            <span>20 dB</span>
+            <span>60 dB</span>
+          </div>
+        </div>
+
+        <div class="setting-item">
+          <label>
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#ffc800" stroke-width="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+              <line x1="12" y1="9" x2="12" y2="13"></line>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+            Warning Threshold (Yellow)
+          </label>
+          <input type="range" id="warningThreshold" min="40" max="80" step="1" value="60">
+          <div class="value-display" id="warningValue">60 dB</div>
+          <div class="threshold-indicators">
+            <span>40 dB</span>
+            <span>80 dB</span>
+          </div>
+        </div>
+
+        <div class="setting-item">
+          <label>
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#ff3232" stroke-width="2">
+              <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            Alert Threshold (Red)
+          </label>
+          <input type="range" id="alertThreshold" min="50" max="100" step="1" value="75">
+          <div class="value-display" id="alertValue">75 dB</div>
+          <div class="threshold-indicators">
+            <span>50 dB</span>
+            <span>100 dB</span>
+          </div>
+        </div>
+
+        <div class="setting-item">
+          <div class="toggle-container">
+            <label>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+              </svg>
+              Sound Alerts
+            </label>
+            <label class="toggle-switch">
+              <input type="checkbox" id="soundAlerts" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="setting-item">
+          <div class="toggle-container">
+            <label>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+              </svg>
+              Visual Flash Alerts
+            </label>
+            <label class="toggle-switch">
+              <input type="checkbox" id="visualAlerts" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quiet Challenge -->
+      <div class="challenge-section" id="challengeSection">
+        <div class="challenge-header">
+          <h3>
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="8" r="7"></circle>
+              <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline>
+            </svg>
+            Quiet Challenge
+          </h3>
+        </div>
+        <div class="challenge-duration" id="challengeDuration">
+          <button class="duration-option selected" data-duration="30">30s</button>
+          <button class="duration-option" data-duration="60">1 min</button>
+          <button class="duration-option" data-duration="120">2 min</button>
+          <button class="duration-option" data-duration="300">5 min</button>
+        </div>
+        <div class="challenge-timer" id="challengeTimer">0:30</div>
+        <div class="challenge-progress">
+          <div class="challenge-progress-bar" id="challengeProgressBar" style="width: 0%"></div>
+        </div>
+        <div class="challenge-btns">
+          <button class="challenge-btn start" id="challengeStartBtn" onclick="toggleChallenge()">Start
+            Challenge</button>
+        </div>
+        <div class="challenge-result" id="challengeResult"></div>
+      </div>
+
+      <!-- Session Tools -->
+      <div class="session-tools">
+        <h3>
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+          </svg>
+          Session Tools
+        </h3>
+        <div class="session-tools-grid">
+          <div class="tool-card">
+            <h4>⏱️ Work Period Timer</h4>
+            <div class="countdown-picker">
+              <button class="countdown-chip" data-mins="5">5 min</button>
+              <button class="countdown-chip selected" data-mins="10">10 min</button>
+              <button class="countdown-chip" data-mins="15">15 min</button>
+              <button class="countdown-chip" data-mins="20">20 min</button>
+              <button class="countdown-chip" data-mins="25">25 min</button>
+              <button class="countdown-chip" data-mins="30">30 min</button>
+            </div>
+            <div style="margin-top:12px;">
+              <button class="countdown-start-btn" onclick="startCountdown()">▶ Start Timer</button>
+            </div>
+          </div>
+          <div class="tool-card">
+            <h4>🙋 Attention Signal</h4>
+            <p style="font-size:0.82rem;color:var(--color-text-muted);margin-bottom:12px;">Flash a full-screen signal to get the class's attention instantly — no shouting needed.</p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="countdown-start-btn" style="background:linear-gradient(135deg,#ffc800,#ff9500)" onclick="triggerAttention('🙋', &quot;Eyes Up Front!&quot;)">🙋 Eyes Up</button>
+              <button class="countdown-start-btn" style="background:linear-gradient(135deg,#ff3232,#ff6b35)" onclick="triggerAttention('🤫', &quot;Shhh — Too Loud!&quot;)">🤫 Too Loud</button>
+              <button class="countdown-start-btn" style="background:linear-gradient(135deg,#00ff88,#00d9ff)" onclick="triggerAttention('⭐', &quot;Amazing Work!&quot;)">⭐ Great Job</button>
+            </div>
+            <div class="custom-attention-row">
+              <input class="custom-attention-input" id="customAttentionMsg" placeholder="Custom message…" maxlength="40">
+              <button class="custom-attention-send" onclick="sendCustomAttention()">Send</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Session History -->
+      <div class="history-panel" id="sessionHistoryPanel">
+        <h3>
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+          </svg>
+          Recent Sessions
+        </h3>
+        <div class="session-history-list" id="sessionHistoryList">
+          <div class="no-history">No sessions recorded yet. Complete a monitoring session to see history here.</div>
+        </div>
+        <div class="grade-chart-section" id="gradeChartSection" style="display:none">
+          <div class="grade-chart-title">Grade Trend (most recent →)</div>
+          <div class="grade-chart" id="gradeChart"></div>
+        </div>
+      </div>
+
+      <!-- Achievement Badges -->
+      <div class="badges-section">
+        <h3>🏆 Achievements</h3>
+        <div class="badges-grid" id="badgesGrid"></div>
+      </div>
+      <div class="history-section">
+        <h3>
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+          </svg>
+          Noise Level History
+        </h3>
+        <div class="history-chart">
+          <canvas id="historyCanvas" class="history-canvas"></canvas>
+        </div>
+      </div>
+
+      <!-- Event Log -->
+      <div class="log-section">
+        <div class="log-header">
+          <h3>
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+            Event Log
+          </h3>
+        </div>
+        <div class="log-empty" id="logEmpty">Events will appear here once monitoring starts.</div>
+        <div class="log-list" id="logList" style="display:none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==================== State ====================
+    let isMonitoring = false;
+    let audioContext = null;
+    let analyser = null;
+    let microphone = null;
+    let dataArray = null;
+    let micPermissionGranted = false;
+    let animationId = null;
+    let sessionStartTime = null;
+    let sessionTimerId = null;
+
+    // Stats tracking
+    let readings = [];
+    let maxReading = 0;
+    let alertCount = 0;
+    let quietReadings = 0;
+    let totalReadings = 0;
+
+    // History
+    let historyData = [];
+    const maxHistoryPoints = 120;
+
+    // Challenge
+    let challengeActive = false;
+    let challengeDuration = 30;
+    let challengeRemaining = 30;
+    let challengeTimerId = null;
+    let challengeSuccess = true;
+
+    // Star / quiet streak system
+    let quietStreakSeconds = 0;
+    let quietStreakTimer = null;
+    let starsEarned = 0;
+    const STAR_INTERVAL = 10; // seconds of quiet per star
+
+    // Event log
+    let eventLog = [];        // { time, db, level, sessionElapsed }
+    let lastLoggedLevel = null;
+    let logThrottleTime = 0;
+
+    // Target level (set by clicking visualizer)
+    let targetDb = null;
+
+    // Countdown timer
+    let countdownMins = 10;
+    let countdownRemaining = 0;
+    let countdownTotal = 0;
+    let countdownTimerId = null;
+    let countdownActive = false;
+
+    // Trend tracking
+    let recentReadings = [];
+    const TREND_WINDOW = 30;
+
+    // Class name
+    let className = '';
+
+    // Ambient colour mode
+    let ambientMode = false;
+    let smoothedDb = 40; // exponential moving average for display
+
+    // Session history (persisted)
+    let sessionHistory = [];
+    const MAX_HISTORY = 10;
+
+    // Achievements
+    const ACHIEVEMENTS = [
+      { id: 'first_session',   icon: '🎓', name: 'First Session',   desc: 'Completed your first monitoring session' },
+      { id: 'grade_a',         icon: '🌟', name: 'Gold Standard',    desc: 'Achieved an A grade session' },
+      { id: 'five_sessions',   icon: '📅', name: '5 Sessions',       desc: 'Completed 5 sessions' },
+      { id: 'ten_sessions',    icon: '🔟', name: 'Dedicated',        desc: 'Completed 10 sessions' },
+      { id: 'zero_alerts',     icon: '🔕', name: 'Silent Mode',      desc: 'A full session with zero noise alerts' },
+      { id: 'all_stars',       icon: '⭐', name: 'Star Collector',   desc: 'Earned all 5 stars in a session' },
+      { id: 'quiet_master',    icon: '🤫', name: 'Quiet Master',     desc: '80%+ quiet time in a session' },
+      { id: 'consistent',      icon: '📊', name: 'Consistent',       desc: '3 consecutive B+ grade sessions' },
+    ];
+    let unlockedAchievements = new Set();
+
+    // Escalating alert system
+    let alertStage = 0;           // 0=none, 1=warn, 2=alarm, 3=critical
+    let alertStageSince = 0;      // timestamp of when current stage started
+    let loudFrameCount = 0;       // consecutive loud frames
+
+    // Calibration
+    let calActive = false;
+    let calReadings = [];
+    let calTimerId = null;
+    let calResult = null;
+    let calSecs = 10;
+
+    // Projector mode
+    let projectorOpen = false;
+
+    // Presets
+    const presets = {
+      custom: { quiet: 40, warning: 60, alert: 75, sensitivity: 1.5 },
+      library: { quiet: 30, warning: 45, alert: 55, sensitivity: 2.0 },
+      groupwork: { quiet: 50, warning: 65, alert: 80, sensitivity: 1.2 },
+      presentation: { quiet: 35, warning: 50, alert: 65, sensitivity: 1.8 },
+      testing: { quiet: 25, warning: 40, alert: 50, sensitivity: 2.5 }
+    };
+
+    // ==================== DOM Elements ====================
+    const dbValueEl = document.getElementById('dbValue');
+    const statusTextEl = document.getElementById('statusText');
+    const characterEl = document.getElementById('character');
+    const noiseCircleEl = document.getElementById('noiseCircle');
+    const visualizerEl = document.getElementById('visualizer');
+    const alertOverlayEl = document.getElementById('alertOverlay');
+    const startBtn = document.getElementById('startBtn');
+    const btnText = document.getElementById('btnText');
+    const btnIcon = document.getElementById('btnIcon');
+    const progressCircle = document.getElementById('progressCircle');
+
+    // Target + average elements
+    const targetLineEl    = document.getElementById('targetLine');
+    const targetLabelEl   = document.getElementById('targetLabel');
+    const avgLineEl       = document.getElementById('avgLine');
+    const avgLineLabelEl  = document.getElementById('avgLineLabel');
+    const avgBadgeValueEl = document.getElementById('avgBadgeValue');
+    const avgBarFillEl    = document.getElementById('avgBarFill');
+    const avgBadgeSubEl   = document.getElementById('avgBadgeSub');
+    const avgGapValueEl   = document.getElementById('avgGapValue');
+
+    // New feature elements
+    const trendArrowEl    = document.getElementById('trendArrow');
+    const countdownBarEl  = document.getElementById('countdownBar');
+    const countdownClockEl= document.getElementById('countdownClock');
+    const countdownFillEl = document.getElementById('countdownFill');
+    const fsAvgValueEl    = document.getElementById('fsAvgValue');
+    const fsAvgGapEl      = document.getElementById('fsAvgGap');
+
+    // Settings elements
+    const sensitivityEl = document.getElementById('sensitivity');
+    const quietThresholdEl = document.getElementById('quietThreshold');
+    const warningThresholdEl = document.getElementById('warningThreshold');
+    const alertThresholdEl = document.getElementById('alertThreshold');
+    const soundAlertsEl = document.getElementById('soundAlerts');
+    const visualAlertsEl = document.getElementById('visualAlerts');
+
+    // Stats elements
+    const avgLevelEl = document.getElementById('avgLevel');
+    const maxLevelEl = document.getElementById('maxLevel');
+    const quietTimeEl = document.getElementById('quietTime');
+    const alertCountEl = document.getElementById('alertCount');
+    const sessionTimeEl = document.getElementById('sessionTime');
+
+    // History canvas
+    const historyCanvas = document.getElementById('historyCanvas');
+    const historyCtx = historyCanvas.getContext('2d');
+
+    // Alert timing
+    let lastAlertTime = 0;
+
+    // ==================== Settings Persistence ====================
+    function saveSettings() {
+      try {
+        localStorage.setItem('cnm_settings', JSON.stringify({
+          sensitivity: sensitivityEl.value,
+          quietThreshold: quietThresholdEl.value,
+          warningThreshold: warningThresholdEl.value,
+          alertThreshold: alertThresholdEl.value,
+          soundAlerts: soundAlertsEl.checked,
+          visualAlerts: visualAlertsEl.checked,
+          targetDb: targetDb
+        }));
+      } catch(e) {}
+    }
+
+    function loadSettings() {
+      try {
+        const s = JSON.parse(localStorage.getItem('cnm_settings') || '{}');
+        if (s.sensitivity)       sensitivityEl.value       = s.sensitivity;
+        if (s.quietThreshold)    quietThresholdEl.value    = s.quietThreshold;
+        if (s.warningThreshold)  warningThresholdEl.value  = s.warningThreshold;
+        if (s.alertThreshold)    alertThresholdEl.value    = s.alertThreshold;
+        if (s.soundAlerts !== undefined) soundAlertsEl.checked = s.soundAlerts;
+        if (s.visualAlerts !== undefined) visualAlertsEl.checked = s.visualAlerts;
+        if (s.targetDb !== null && s.targetDb !== undefined) {
+          setTimeout(() => setTargetDb(s.targetDb), 50);
+        }
+      } catch(e) {}
+
+      // Class name
+      try {
+        const cn = localStorage.getItem('cnm_className') || '';
+        if (cn) {
+          className = cn;
+          document.getElementById('classNameDisplay').textContent = cn;
+          document.getElementById('fsClassName').textContent = cn;
+        }
+      } catch(e) {}
+    }
+
+    // ==================== Initialize ====================
+    function initVisualizer() {
+      visualizerEl.innerHTML = '';
+      const barCount = 80;
+      for (let i = 0; i < barCount; i++) {
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        bar.style.height = '4px';
+        visualizerEl.appendChild(bar);
+      }
+      // Re-append overlay elements after clearing (they were wiped by innerHTML='')
+      visualizerEl.appendChild(targetLineEl);
+      visualizerEl.appendChild(avgLineEl);
+    }
+
+    // ==================== Target Level (Visualizer Click) ====================
+    function dbToVisualizerTop(db) {
+      // Visualizer maps 20–120 dB range bottom→top within the 140px height (minus 30px padding)
+      // Bars grow from bottom; 0% height = bottom, 100% = top
+      // The container is 140px total, padding 15px top+bottom leaves 110px usable
+      const containerH = visualizerEl.offsetHeight;           // 140
+      const pad = 15;
+      const usable = containerH - pad * 2;                    // 110
+      const minDb = 20, maxDb = 120;
+      const frac = Math.max(0, Math.min(1, (db - minDb) / (maxDb - minDb)));
+      // frac=0 → bottom (top = containerH - pad), frac=1 → top (top = pad)
+      return containerH - pad - frac * usable;
+    }
+
+    function visualizerTopToDb(topPx) {
+      const containerH = visualizerEl.offsetHeight;
+      const pad = 15;
+      const usable = containerH - pad * 2;
+      const minDb = 20, maxDb = 120;
+      const frac = 1 - Math.max(0, Math.min(usable, topPx - pad)) / usable;
+      return Math.round(minDb + frac * (maxDb - minDb));
+    }
+
+    function setTargetDb(db) {
+      targetDb = Math.max(20, Math.min(120, db));
+      const topPx = dbToVisualizerTop(targetDb);
+      targetLineEl.style.top = topPx + 'px';
+      targetLabelEl.textContent = `Target: ${targetDb} dB`;
+      targetLineEl.style.display = 'block';
+      updateAvgBadge();
+    }
+
+    visualizerEl.addEventListener('click', function(e) {
+      // Get Y position relative to the visualizer container
+      const rect = visualizerEl.getBoundingClientRect();
+      const offsetY = e.clientY - rect.top;
+      const db = visualizerTopToDb(offsetY);
+      setTargetDb(db);
+      showToast(`🎯 Target set to ${db} dB`, 'info', 1800);
+    });
+
+    // ==================== Average Badge Update ====================
+    function updateAvgBadge(avg) {
+      if (avg === undefined) {
+        // called without arg — use last known or skip
+        if (readings.length === 0) return;
+        avg = Math.round(readings.reduce((a, b) => a + b, 0) / readings.length);
+      }
+
+      avgBadgeValueEl.textContent = avg;
+
+      // Bar fill: show avg relative to 120 dB max
+      const fillPct = Math.min(100, Math.round((avg / 120) * 100));
+      avgBarFillEl.style.width = fillPct + '%';
+
+      // Colour the bar based on thresholds
+      const qt = parseInt(quietThresholdEl.value);
+      const wt = parseInt(warningThresholdEl.value);
+      if (avg < qt) {
+        avgBarFillEl.style.background = 'linear-gradient(90deg, var(--color-primary), var(--color-quiet))';
+        avgBadgeSubEl.textContent = `Below quiet threshold (${qt} dB) — great session!`;
+      } else if (avg < wt) {
+        avgBarFillEl.style.background = 'linear-gradient(90deg, var(--color-primary), var(--color-moderate))';
+        avgBadgeSubEl.textContent = `Moderate — aim below ${qt} dB for a quiet session`;
+      } else {
+        avgBarFillEl.style.background = 'linear-gradient(90deg, var(--color-moderate), var(--color-loud))';
+        avgBadgeSubEl.textContent = `Above warning threshold (${wt} dB) — too noisy`;
+      }
+
+      // Update avg overlay line on visualizer
+      avgLineEl.style.display = 'block';
+      avgLineEl.style.top = dbToVisualizerTop(avg) + 'px';
+      avgLineLabelEl.textContent = `Avg: ${avg} dB`;
+
+      // Gap vs target
+      if (targetDb !== null) {
+        const gap = avg - targetDb;
+        const gapAbs = Math.abs(gap);
+        const sign = gap > 0 ? '+' : gap < 0 ? '−' : '';
+        avgGapValueEl.textContent = `${sign}${gapAbs} dB`;
+        if (gapAbs <= 2) {
+          avgGapValueEl.className = 'avg-target-gap-value gap-on';
+        } else if (gap < 0) {
+          avgGapValueEl.className = 'avg-target-gap-value gap-under';
+        } else {
+          avgGapValueEl.className = 'avg-target-gap-value gap-over';
+        }
+        // Fullscreen overlay
+        fsAvgValueEl.textContent = avg;
+        fsAvgGapEl.textContent = `${sign}${gapAbs} dB vs target`;
+        fsAvgGapEl.style.color = gapAbs <= 2 ? 'var(--color-moderate)' : gap < 0 ? 'var(--color-quiet)' : 'var(--color-loud)';
+      } else {
+        avgGapValueEl.textContent = 'No target';
+        avgGapValueEl.className = 'avg-target-gap-value';
+        fsAvgValueEl.textContent = avg;
+        fsAvgGapEl.textContent = 'No target set';
+        fsAvgGapEl.style.color = 'var(--color-text-muted)';
+      }
+    }
+
+    function updateSettingsDisplay() {
+      document.getElementById('sensitivityValue').textContent = parseFloat(sensitivityEl.value).toFixed(1) + 'x';
+      document.getElementById('quietValue').textContent = quietThresholdEl.value + ' dB';
+      document.getElementById('warningValue').textContent = warningThresholdEl.value + ' dB';
+      document.getElementById('alertValue').textContent = alertThresholdEl.value + ' dB';
+
+      // Ensure thresholds are logical
+      const quiet = parseInt(quietThresholdEl.value);
+      const warning = parseInt(warningThresholdEl.value);
+      const alert = parseInt(alertThresholdEl.value);
+
+      if (warning <= quiet) {
+        warningThresholdEl.value = quiet + 5;
+        document.getElementById('warningValue').textContent = warningThresholdEl.value + ' dB';
+      }
+      if (alert <= warning) {
+        alertThresholdEl.value = parseInt(warningThresholdEl.value) + 5;
+        document.getElementById('alertValue').textContent = alertThresholdEl.value + ' dB';
+      }
+    }
+
+    // Add event listeners
+    sensitivityEl.addEventListener('input', () => { updateSettingsDisplay(); saveSettings(); });
+    quietThresholdEl.addEventListener('input', () => { updateSettingsDisplay(); saveSettings(); });
+    warningThresholdEl.addEventListener('input', () => { updateSettingsDisplay(); saveSettings(); });
+    alertThresholdEl.addEventListener('input', () => { updateSettingsDisplay(); saveSettings(); });
+    soundAlertsEl.addEventListener('change', saveSettings);
+    visualAlertsEl.addEventListener('change', saveSettings);
+
+    // Challenge duration buttons
+    document.querySelectorAll('.duration-option').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.duration-option').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        challengeDuration = parseInt(btn.dataset.duration);
+        challengeRemaining = challengeDuration;
+        updateChallengeDisplay();
+      });
+    });
+
+    // Countdown chip buttons
+    document.querySelectorAll('.countdown-chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.countdown-chip').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        countdownMins = parseInt(btn.dataset.mins);
+      });
+    });
+
+    // ==================== Modal ====================
+    function showPermissionModal() {
+      document.getElementById('permissionModal').classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('permissionModal').classList.remove('active');
+    }
+
+    function showErrorModal(title, message) {
+      document.getElementById('errorModalTitle').textContent = title;
+      document.getElementById('errorModalMessage').textContent = message;
+      document.getElementById('errorModal').classList.add('active');
+    }
+
+    function closeErrorModal() {
+      document.getElementById('errorModal').classList.remove('active');
+    }
+
+    async function requestMicrophoneAccess() {
+      closeModal();
+
+      // Check if getUserMedia is supported
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showErrorModal(
+          'Browser Not Supported',
+          'Your browser does not support microphone access. Please try using Chrome, Firefox, Edge, or Safari 11+.'
+        );
+        return;
+      }
+
+      try {
+        // Request microphone permission
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false
+          }
+        });
+
+        await initAudio(stream);
+        micPermissionGranted = true;
+        startMonitoring();
+
+      } catch (err) {
+        console.error('Microphone access error:', err);
+
+        let title = 'Microphone Access Denied';
+        let message = '';
+
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          // Check if Safari
+          const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+          if (isSafari) {
+            title = 'Safari Permission Required';
+            message = 'To enable microphone access in Safari:\n\n' +
+              '1. Click Safari menu → Settings (or Preferences)\n' +
+              '2. Go to "Websites" tab\n' +
+              '3. Click "Microphone" in the left sidebar\n' +
+              '4. Find this website and select "Allow"\n' +
+              '5. Refresh this page and try again\n\n' +
+              'Also check: System Preferences → Security & Privacy → Privacy → Microphone → Enable Safari';
+          } else {
+            message = 'Microphone permission was denied. Please click the camera/microphone icon in your browser\'s address bar and allow access, then try again.';
+          }
+        } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+          title = 'No Microphone Found';
+          message = 'No microphone was detected on your device. Please connect a microphone and try again.';
+        } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+          title = 'Microphone In Use';
+          message = 'Your microphone may be in use by another application. Please close other apps using the microphone and try again.';
+        } else if (err.name === 'OverconstrainedError') {
+          title = 'Microphone Error';
+          message = 'Could not access microphone with required settings. Please try again.';
+        } else if (err.name === 'SecurityError') {
+          title = 'Security Error';
+          message = 'Microphone access was blocked due to security restrictions. Make sure you are accessing this page via HTTPS.';
+        } else {
+          message = 'An unexpected error occurred while accessing the microphone: ' + err.message;
+        }
+
+        showErrorModal(title, message);
+      }
+    }
+
+    // ==================== Audio ====================
+    async function initAudio(stream) {
+      // Create AudioContext (Safari uses webkitAudioContext)
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      audioContext = new AudioContextClass();
+
+      // Safari and some browsers start AudioContext in suspended state
+      // We need to resume it after a user gesture
+      if (audioContext.state === 'suspended') {
+        try {
+          await audioContext.resume();
+        } catch (e) {
+          console.warn('Could not resume AudioContext:', e);
+        }
+      }
+
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.75;
+
+      microphone = audioContext.createMediaStreamSource(stream);
+      microphone.connect(analyser);
+
+      const bufferLength = analyser.frequencyBinCount;
+      dataArray = new Uint8Array(bufferLength);
+
+      // Store stream reference for cleanup
+      audioContext._stream = stream;
+    }
+
+    // ==================== Monitoring ====================
+    async function toggleMonitoring() {
+      if (!isMonitoring) {
+        if (!audioContext) {
+          // Skip modal if permission already granted in this page session
+          if (micPermissionGranted) {
+            await requestMicrophoneAccess();
+          } else {
+            showPermissionModal();
+          }
+        } else {
+          await startMonitoring();
+        }
+      } else {
+        stopMonitoring();
+      }
+    }
+
+    async function startMonitoring() {
+      // Ensure AudioContext is running (Safari requirement)
+      if (audioContext && audioContext.state === 'suspended') {
+        try {
+          await audioContext.resume();
+        } catch (e) {
+          console.warn('Could not resume AudioContext:', e);
+        }
+      }
+
+      // Reset per-session transient state
+      smoothedDb = 40;
+      recentReadings = [];
+
+      isMonitoring = true;
+      startBtn.classList.remove('inactive');
+      startBtn.classList.add('active');
+      btnText.textContent = 'Stop Monitoring';
+      btnIcon.innerHTML = '<rect x="6" y="4" width="4" height="16" fill="currentColor"></rect><rect x="14" y="4" width="4" height="16" fill="currentColor"></rect>';
+      noiseCircleEl.classList.add('monitoring');
+
+      // Show challenge section
+      document.getElementById('challengeSection').classList.add('active');
+
+      // Start session timer
+      sessionStartTime = Date.now();
+      sessionTimerId = setInterval(updateSessionTime, 1000);
+
+      updateLoop();
+    }
+
+    function stopMonitoring() {
+      isMonitoring = false;
+
+      // Reset escalating alert state
+      clearAlertStage();
+
+      // Save session to history if we have meaningful data
+      if (readings.length > 10) {
+        const quietPct = totalReadings > 0 ? Math.round((quietReadings / totalReadings) * 100) : 0;
+        const avgDb = Math.round(readings.reduce((a,b)=>a+b,0) / readings.length);
+        const grade = getGrade(quietPct, avgDb, alertCount);
+        const elapsed = sessionStartTime ? Math.floor((Date.now() - sessionStartTime) / 1000) : 0;
+        const durMins = Math.floor(elapsed/60), durSecs = elapsed%60;
+
+        // Downsample historyData for sparkline (max 20 points)
+        let sparkData = historyData;
+        if (sparkData.length > 20) {
+          const step = Math.floor(sparkData.length / 20);
+          sparkData = sparkData.filter((_, i) => i % step === 0).slice(0, 20);
+        }
+
+        const sessionData = {
+          date: new Date().toLocaleDateString('en-AU', { weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }),
+          grade, avgDb, quietPct,
+          duration: `${durMins}:${durSecs.toString().padStart(2,'0')}`,
+          alerts: alertCount,
+          className,
+          sparkData,
+          quietThreshold: parseInt(quietThresholdEl.value),
+          warningThreshold: parseInt(warningThresholdEl.value)
+        };
+        saveSessionToHistory(sessionData);
+        checkAchievements(sessionData);
+      }
+      startBtn.classList.remove('active');
+      startBtn.classList.add('inactive');
+      btnText.textContent = 'Start Monitoring';
+      btnIcon.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
+      noiseCircleEl.classList.remove('monitoring');
+
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+      }
+      if (sessionTimerId) {
+        clearInterval(sessionTimerId);
+        sessionTimerId = null;
+      }
+
+      // Release microphone and audio resources
+      if (audioContext) {
+        if (audioContext._stream) {
+          audioContext._stream.getTracks().forEach(track => track.stop());
+        }
+        audioContext.close().catch(() => {});
+        audioContext = null;
+        analyser = null;
+        microphone = null;
+        dataArray = null;
+      }
+
+      // Stop any active challenge
+      if (challengeActive) {
+        stopChallenge();
+      }
+
+      // Reset display
+      dbValueEl.textContent = '--';
+      statusTextEl.textContent = 'Stopped';
+      statusTextEl.className = 'status-text';
+      characterEl.textContent = '😊';
+      noiseCircleEl.className = 'noise-circle';
+      alertOverlayEl.classList.remove('active');
+      updateProgressRing(0);
+      resetQuietStreak();
+
+      // Reset visualizer
+      const bars = visualizerEl.querySelectorAll('.bar');
+      bars.forEach(bar => bar.style.height = '4px');
+    }
+
+    function resetStats() {
+      readings = [];
+      maxReading = 0;
+      alertCount = 0;
+      quietReadings = 0;
+      totalReadings = 0;
+      historyData = [];
+      sessionStartTime = isMonitoring ? Date.now() : null;
+
+      // Reset log & streak
+      eventLog = [];
+      lastLoggedLevel = null;
+      logThrottleTime = 0;
+      resetQuietStreak();
+      renderLog();
+
+      avgLevelEl.textContent = '--';
+      maxLevelEl.textContent = '--';
+      quietTimeEl.textContent = '--';
+      alertCountEl.textContent = '0';
+      sessionTimeEl.textContent = '0:00';
+
+      // Reset avg badge
+      avgBadgeValueEl.textContent = '--';
+      avgBarFillEl.style.width = '0%';
+      avgBadgeSubEl.textContent = 'Start monitoring to see your average';
+      avgGapValueEl.textContent = '--';
+      avgGapValueEl.className = 'avg-target-gap-value';
+      avgLineEl.style.display = 'none';
+
+      // Clear history chart
+      historyCtx.clearRect(0, 0, historyCanvas.width, historyCanvas.height);
+    }
+
+    // ==================== Calculations ====================
+    function calculateDB() {
+      analyser.getByteFrequencyData(dataArray);
+
+      let sum = 0;
+      for (let i = 0; i < dataArray.length; i++) {
+        sum += dataArray[i] * dataArray[i];
+      }
+      const rms = Math.sqrt(sum / dataArray.length);
+
+      const sensitivity = parseFloat(sensitivityEl.value);
+      const rawDb = Math.min(120, Math.max(20, (rms * sensitivity * 0.4) + 20));
+
+      // Exponential moving average — faster rise, slower fall for natural feel
+      const alpha = rawDb > smoothedDb ? 0.25 : 0.12;
+      smoothedDb = smoothedDb + alpha * (rawDb - smoothedDb);
+
+      return Math.round(smoothedDb);
+    }
+
+    function updateProgressRing(db) {
+      const maxDb = 100;
+      const percentage = Math.min(db / maxDb, 1);
+      const circumference = 2 * Math.PI * 150;
+      const offset = circumference * (1 - percentage);
+
+      progressCircle.style.strokeDashoffset = offset;
+
+      const quietThreshold = parseInt(quietThresholdEl.value);
+      const warningThreshold = parseInt(warningThresholdEl.value);
+      const alertThreshold = parseInt(alertThresholdEl.value);
+
+      if (db < quietThreshold) {
+        progressCircle.style.stroke = 'var(--color-quiet)';
+      } else if (db < warningThreshold) {
+        progressCircle.style.stroke = 'var(--color-moderate)';
+      } else {
+        progressCircle.style.stroke = 'var(--color-loud)';
+      }
+    }
+
+    function updateVisualizer() {
+      analyser.getByteFrequencyData(dataArray);
+      const bars = visualizerEl.querySelectorAll('.bar');
+      const step = Math.floor(dataArray.length / bars.length);
+
+      bars.forEach((bar, index) => {
+        const value = dataArray[index * step];
+        const height = Math.max(4, (value / 255) * 120);
+        bar.style.height = height + 'px';
+      });
+    }
+
+    function updateNoiseDisplay(db) {
+      const quietThreshold = parseInt(quietThresholdEl.value);
+      const warningThreshold = parseInt(warningThresholdEl.value);
+      const alertThreshold = parseInt(alertThresholdEl.value);
+
+      dbValueEl.textContent = db;
+      updateProgressRing(db);
+
+      noiseCircleEl.classList.remove('quiet', 'moderate', 'loud');
+      statusTextEl.classList.remove('status-quiet', 'status-moderate', 'status-loud');
+
+      if (db < quietThreshold) {
+        noiseCircleEl.classList.add('quiet');
+        statusTextEl.classList.add('status-quiet');
+        statusTextEl.textContent = 'Perfect!';
+        characterEl.textContent = '😊';
+        quietReadings++;
+        startQuietStreak();
+        addLogEntry(db, 'quiet');
+        updateAmbient('quiet');
+      } else if (db < warningThreshold) {
+        noiseCircleEl.classList.add('moderate');
+        statusTextEl.classList.add('status-moderate');
+        statusTextEl.textContent = 'Getting Louder';
+        characterEl.textContent = '😐';
+        resetQuietStreak();
+        addLogEntry(db, 'moderate');
+        updateAmbient('moderate');
+      } else if (db < alertThreshold) {
+        noiseCircleEl.classList.add('moderate');
+        statusTextEl.classList.add('status-moderate');
+        statusTextEl.textContent = 'Too Loud!';
+        characterEl.textContent = '😬';
+        resetQuietStreak();
+        addLogEntry(db, 'moderate');
+        updateAmbient('moderate');
+
+        // Challenge failure if above quiet threshold
+        if (challengeActive) {
+          challengeSuccess = false;
+        }
+      } else {
+        noiseCircleEl.classList.add('loud');
+        statusTextEl.classList.add('status-loud');
+        statusTextEl.textContent = 'WAY TOO LOUD!';
+        characterEl.textContent = '🤯';
+        resetQuietStreak();
+        addLogEntry(db, 'loud');
+        triggerAlert();
+        updateAmbient('loud');
+
+        if (challengeActive) {
+          challengeSuccess = false;
+        }
+      }
+
+      totalReadings++;
+    }
+
+    function triggerAlert() {
+      const now = Date.now();
+      if (now - lastAlertTime < 1500) return;
+      lastAlertTime = now;
+      alertCount++;
+      alertCountEl.textContent = alertCount;
+
+      if (visualAlertsEl.checked) {
+        alertOverlayEl.classList.add('active');
+        setTimeout(() => alertOverlayEl.classList.remove('active'), 800);
+      }
+
+      if (soundAlertsEl.checked && audioContext) {
+        playAlertSound();
+      }
+    }
+
+    function playAlertSound() {
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+      oscillator.frequency.setValueAtTime(660, audioContext.currentTime + 0.1);
+      oscillator.frequency.setValueAtTime(880, audioContext.currentTime + 0.2);
+
+      gainNode.gain.setValueAtTime(0.25, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.35);
+
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.35);
+    }
+
+    function updateStats(db) {
+      readings.push(db);
+      if (readings.length > 200) readings.shift();
+
+      const avg = Math.round(readings.reduce((a, b) => a + b, 0) / readings.length);
+      avgLevelEl.textContent = avg;
+
+      if (db > maxReading) {
+        maxReading = db;
+        maxLevelEl.textContent = maxReading;
+      }
+
+      const quietPercent = Math.round((quietReadings / totalReadings) * 100);
+      quietTimeEl.textContent = quietPercent + '%';
+
+      // Update prominent average badge and avg line on visualizer
+      updateAvgBadge(avg);
+    }
+
+    function updateSessionTime() {
+      if (!sessionStartTime) return;
+      const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
+      const mins = Math.floor(elapsed / 60);
+      const secs = elapsed % 60;
+      sessionTimeEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    function updateHistoryChart(db) {
+      historyData.push(db);
+      if (historyData.length > maxHistoryPoints) {
+        historyData.shift();
+      }
+
+      const dpr = window.devicePixelRatio || 1;
+      historyCanvas.width = historyCanvas.offsetWidth * dpr;
+      historyCanvas.height = historyCanvas.offsetHeight * dpr;
+      historyCtx.scale(dpr, dpr);
+
+      const width = historyCanvas.offsetWidth;
+      const height = historyCanvas.offsetHeight;
+
+      historyCtx.clearRect(0, 0, width, height);
+
+      const quietThreshold = parseInt(quietThresholdEl.value);
+      const warningThreshold = parseInt(warningThresholdEl.value);
+
+      // Draw threshold lines
+      historyCtx.setLineDash([5, 5]);
+
+      const quietY = height - (quietThreshold / 100) * height;
+      historyCtx.strokeStyle = 'rgba(0, 255, 136, 0.4)';
+      historyCtx.beginPath();
+      historyCtx.moveTo(0, quietY);
+      historyCtx.lineTo(width, quietY);
+      historyCtx.stroke();
+
+      const warningY = height - (warningThreshold / 100) * height;
+      historyCtx.strokeStyle = 'rgba(255, 200, 0, 0.4)';
+      historyCtx.beginPath();
+      historyCtx.moveTo(0, warningY);
+      historyCtx.lineTo(width, warningY);
+      historyCtx.stroke();
+
+      historyCtx.setLineDash([]);
+
+      if (historyData.length < 2) return;
+
+      // Draw gradient fill
+      const gradient = historyCtx.createLinearGradient(0, 0, 0, height);
+      gradient.addColorStop(0, 'rgba(255, 50, 50, 0.3)');
+      gradient.addColorStop(0.5, 'rgba(255, 200, 0, 0.2)');
+      gradient.addColorStop(1, 'rgba(0, 255, 136, 0.1)');
+
+      const stepX = width / (maxHistoryPoints - 1);
+
+      historyCtx.beginPath();
+      historyCtx.moveTo(0, height);
+
+      historyData.forEach((value, index) => {
+        const x = index * stepX;
+        const y = height - (value / 100) * height;
+        historyCtx.lineTo(x, y);
+      });
+
+      historyCtx.lineTo((historyData.length - 1) * stepX, height);
+      historyCtx.closePath();
+      historyCtx.fillStyle = gradient;
+      historyCtx.fill();
+
+      // Draw line
+      const lineGradient = historyCtx.createLinearGradient(0, 0, 0, height);
+      lineGradient.addColorStop(0, '#ff3232');
+      lineGradient.addColorStop(0.5, '#ffc800');
+      lineGradient.addColorStop(1, '#00ff88');
+
+      historyCtx.strokeStyle = lineGradient;
+      historyCtx.lineWidth = 2.5;
+      historyCtx.lineCap = 'round';
+      historyCtx.lineJoin = 'round';
+
+      historyCtx.beginPath();
+      historyData.forEach((value, index) => {
+        const x = index * stepX;
+        const y = height - (value / 100) * height;
+
+        if (index === 0) {
+          historyCtx.moveTo(x, y);
+        } else {
+          historyCtx.lineTo(x, y);
+        }
+      });
+      historyCtx.stroke();
+    }
+
+    // ==================== Presets ====================
+    function applyPreset(presetName) {
+      document.querySelectorAll('.preset-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.preset === presetName);
+      });
+
+      const preset = presets[presetName];
+      if (preset) {
+        sensitivityEl.value = preset.sensitivity;
+        quietThresholdEl.value = preset.quiet;
+        warningThresholdEl.value = preset.warning;
+        alertThresholdEl.value = preset.alert;
+        updateSettingsDisplay();
+      }
+    }
+
+    // ==================== Theme ====================
+    function toggleTheme() {
+      document.body.classList.toggle('theme-light');
+    }
+
+    // ==================== Fullscreen ====================
+    function toggleFullscreen() {
+      document.body.classList.toggle('fullscreen');
+
+      const icon = document.querySelector('#fullscreenBtn svg');
+      if (document.body.classList.contains('fullscreen')) {
+        icon.innerHTML = `
+                    <polyline points="4 14 10 14 10 20"></polyline>
+                    <polyline points="20 10 14 10 14 4"></polyline>
+                    <line x1="14" y1="10" x2="21" y2="3"></line>
+                    <line x1="3" y1="21" x2="10" y2="14"></line>
+                `;
+      } else {
+        icon.innerHTML = `
+                    <polyline points="15 3 21 3 21 9"></polyline>
+                    <polyline points="9 21 3 21 3 15"></polyline>
+                    <line x1="21" y1="3" x2="14" y2="10"></line>
+                    <line x1="3" y1="21" x2="10" y2="14"></line>
+                `;
+      }
+    }
+
+    // ==================== Challenge ====================
+    function updateChallengeDisplay() {
+      const mins = Math.floor(challengeRemaining / 60);
+      const secs = challengeRemaining % 60;
+      document.getElementById('challengeTimer').textContent =
+        mins > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : `0:${secs.toString().padStart(2, '0')}`;
+
+      const progress = ((challengeDuration - challengeRemaining) / challengeDuration) * 100;
+      document.getElementById('challengeProgressBar').style.width = progress + '%';
+    }
+
+    function toggleChallenge() {
+      if (challengeActive) {
+        stopChallenge();
+      } else {
+        startChallenge();
+      }
+    }
+
+    function startChallenge() {
+      challengeActive = true;
+      challengeSuccess = true;
+      challengeRemaining = challengeDuration;
+
+      document.getElementById('challengeStartBtn').textContent = 'Cancel';
+      document.getElementById('challengeStartBtn').classList.remove('start');
+      document.getElementById('challengeStartBtn').classList.add('cancel');
+
+      challengeTimerId = setInterval(() => {
+        challengeRemaining--;
+        updateChallengeDisplay();
+
+        if (challengeRemaining <= 0) {
+          endChallenge();
+        }
+      }, 1000);
+
+      updateChallengeDisplay();
+    }
+
+    function stopChallenge() {
+      challengeActive = false;
+      if (challengeTimerId) {
+        clearInterval(challengeTimerId);
+      }
+
+      document.getElementById('challengeStartBtn').textContent = 'Start Challenge';
+      document.getElementById('challengeStartBtn').classList.add('start');
+      document.getElementById('challengeStartBtn').classList.remove('cancel');
+
+      challengeRemaining = challengeDuration;
+      updateChallengeDisplay();
+      document.getElementById('challengeProgressBar').style.width = '0%';
+    }
+
+    function endChallenge() {
+      const succeeded = challengeSuccess;
+      stopChallenge();
+
+      const resultEl = document.getElementById('challengeResult');
+      if (succeeded) {
+        playSuccessSound();
+        showToast('🎉 Challenge Complete! Amazing work!', 'success', 3500);
+        resultEl.textContent = '✓ Completed successfully!';
+        resultEl.className = 'challenge-result success';
+      } else {
+        showToast('😬 Challenge failed — noise too high. Try again!', 'fail', 3000);
+        resultEl.textContent = '✗ Noise level exceeded the limit.';
+        resultEl.className = 'challenge-result fail';
+      }
+      // Clear result after 6 seconds
+      setTimeout(() => { resultEl.textContent = ''; resultEl.className = 'challenge-result'; }, 6000);
+    }
+
+    function playSuccessSound() {
+      if (!audioContext) return;
+
+      const notes = [523.25, 659.25, 783.99, 1046.50];
+      notes.forEach((freq, i) => {
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.2, audioContext.currentTime + i * 0.15);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + i * 0.15 + 0.3);
+        osc.start(audioContext.currentTime + i * 0.15);
+        osc.stop(audioContext.currentTime + i * 0.15 + 0.3);
+      });
+    }
+
+    // ==================== Main Loop ====================
+    function updateLoop() {
+      if (!isMonitoring) return;
+
+      const db = calculateDB();
+      updateNoiseDisplay(db);
+      updateVisualizer();
+      updateStats(db);
+      updateHistoryChart(db);
+      updateTrend(db);
+      updateThermometer(db);
+      updateProjector(db);
+      updateEscalatingAlert(db);
+
+      animationId = requestAnimationFrame(updateLoop);
+    }
+
+    // ==================== Toast ====================
+    function showToast(message, type = 'info', duration = 2800) {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.classList.add('fadeout');
+        toast.addEventListener('animationend', () => toast.remove(), { once: true });
+      }, duration);
+    }
+
+    // ==================== Star / Quiet Streak System ====================
+    function startQuietStreak() {
+      if (quietStreakTimer) return;
+      quietStreakTimer = setInterval(() => {
+        quietStreakSeconds++;
+        const newStars = Math.min(5, Math.floor(quietStreakSeconds / STAR_INTERVAL));
+        if (newStars > starsEarned) {
+          starsEarned = newStars;
+          updateStarDisplay(starsEarned, true);
+          if (starsEarned <= 5) {
+            showToast(`⭐ ${starsEarned} star${starsEarned > 1 ? 's' : ''}! Keep it quiet!`, 'info', 2000);
+          }
+        } else {
+          updateStarDisplay(starsEarned, false);
+        }
+      }, 1000);
+    }
+
+    function resetQuietStreak() {
+      clearInterval(quietStreakTimer);
+      quietStreakTimer = null;
+      quietStreakSeconds = 0;
+      starsEarned = 0;
+      updateStarDisplay(0, false);
+    }
+
+    function updateStarDisplay(count, pop) {
+      const stars = document.querySelectorAll('.star');
+      stars.forEach((star, i) => {
+        const shouldBeEarned = i < count;
+        const wasEarned = star.classList.contains('earned');
+        if (shouldBeEarned) {
+          star.classList.add('earned');
+          if (!wasEarned && pop) {
+            star.classList.remove('pop');
+            void star.offsetWidth; // force reflow
+            star.classList.add('pop');
+          }
+        } else {
+          star.classList.remove('earned', 'pop');
+        }
+      });
+    }
+
+    // ==================== Event Log ====================
+    function addLogEntry(db, level) {
+      const now = Date.now();
+      if (now - logThrottleTime < 3000 && level === lastLoggedLevel) return;
+      logThrottleTime = now;
+      lastLoggedLevel = level;
+
+      const elapsed = sessionStartTime ? Math.floor((now - sessionStartTime) / 1000) : 0;
+      const mins = Math.floor(elapsed / 60);
+      const secs = elapsed % 60;
+      const timeStr = `${mins}:${secs.toString().padStart(2, '0')}`;
+
+      const labels = {
+        quiet:    'Quiet ✓',
+        moderate: 'Getting Loud',
+        loud:     '🚨 Alert!'
+      };
+
+      eventLog.push({ time: new Date(), db, level, timeStr });
+      if (eventLog.length > 200) eventLog.shift();
+
+      renderLog();
+    }
+
+    function renderLog() {
+      const list = document.getElementById('logList');
+      const empty = document.getElementById('logEmpty');
+
+      if (eventLog.length === 0) {
+        empty.style.display = 'block';
+        list.style.display = 'none';
+        return;
+      }
+      empty.style.display = 'none';
+      list.style.display = 'flex';
+
+      // Build from newest first
+      list.innerHTML = '';
+      const recent = [...eventLog].reverse().slice(0, 60);
+      recent.forEach(entry => {
+        const row = document.createElement('div');
+        row.className = 'log-entry';
+
+        const dot = document.createElement('div');
+        dot.className = `log-dot ${entry.level}`;
+
+        const time = document.createElement('span');
+        time.className = 'log-time';
+        time.textContent = entry.timeStr;
+
+        const label = document.createElement('span');
+        const map = { quiet: 'Quiet ✓', moderate: 'Getting Loud', loud: '🚨 Alert!' };
+        label.textContent = `${map[entry.level] || entry.level}  —  ${entry.db} dB`;
+
+        row.appendChild(dot);
+        row.appendChild(time);
+        row.appendChild(label);
+        list.appendChild(row);
+      });
+    }
+
+    // ==================== Export CSV ====================
+    function exportLog() {
+      if (eventLog.length === 0) {
+        showToast('No data to export yet. Start monitoring first!', 'info', 2500);
+        return;
+      }
+      const lines = ['Time,Session Elapsed,dB,Level'];
+      eventLog.forEach(e => {
+        lines.push(`"${e.time.toLocaleTimeString()}","${e.timeStr}",${e.db},"${e.level}"`);
+      });
+      const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `noise-log-${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('📥 CSV downloaded!', 'success', 2000);
+    }
+
+    // ==================== Trend Arrow ====================
+    let trendFrameCount = 0;
+    function updateTrend(db) {
+      recentReadings.push(db);
+      if (recentReadings.length > TREND_WINDOW) recentReadings.shift();
+      trendFrameCount++;
+      if (trendFrameCount % 15 !== 0) return; // update every ~15 frames
+
+      if (recentReadings.length < 10) return;
+      const half = Math.floor(recentReadings.length / 2);
+      const oldAvg = recentReadings.slice(0, half).reduce((a,b) => a+b,0) / half;
+      const newAvg = recentReadings.slice(half).reduce((a,b) => a+b,0) / (recentReadings.length - half);
+      const delta = newAvg - oldAvg;
+
+      trendArrowEl.classList.add('visible');
+      if (delta > 2) {
+        trendArrowEl.textContent = '↑';
+        trendArrowEl.className = 'trend-arrow visible trend-up';
+      } else if (delta < -2) {
+        trendArrowEl.textContent = '↓';
+        trendArrowEl.className = 'trend-arrow visible trend-down';
+      } else {
+        trendArrowEl.textContent = '→';
+        trendArrowEl.className = 'trend-arrow visible trend-flat';
+      }
+    }
+
+    // ==================== Countdown Timer ====================
+    function startCountdown() {
+      if (countdownActive) { endCountdown(); return; }
+      if (!isMonitoring) {
+        showToast('Start monitoring first, then use the timer', 'info', 2500);
+        return;
+      }
+      countdownTotal = countdownMins * 60;
+      countdownRemaining = countdownTotal;
+      countdownActive = true;
+      countdownBarEl.classList.add('active');
+      document.getElementById('countdownLabel').textContent = `Work Period — ${countdownMins} min`;
+      updateCountdownDisplay();
+
+      countdownTimerId = setInterval(() => {
+        countdownRemaining--;
+        updateCountdownDisplay();
+        if (countdownRemaining <= 0) {
+          endCountdown(true);
+        }
+      }, 1000);
+    }
+
+    function updateCountdownDisplay() {
+      const mins = Math.floor(countdownRemaining / 60);
+      const secs = countdownRemaining % 60;
+      countdownClockEl.textContent = `${mins}:${secs.toString().padStart(2,'0')}`;
+      const pct = countdownTotal > 0 ? (countdownRemaining / countdownTotal) * 100 : 0;
+      countdownFillEl.style.width = pct + '%';
+      if (countdownRemaining <= 60) {
+        countdownClockEl.classList.add('urgent');
+        countdownFillEl.style.background = 'linear-gradient(90deg, var(--color-loud), var(--color-moderate))';
+      } else {
+        countdownClockEl.classList.remove('urgent');
+        countdownFillEl.style.background = 'linear-gradient(90deg, var(--color-primary), var(--color-quiet))';
+      }
+    }
+
+    function endCountdown(natural = false) {
+      countdownActive = false;
+      clearInterval(countdownTimerId);
+      countdownBarEl.classList.remove('active');
+      countdownClockEl.classList.remove('urgent');
+      if (natural) {
+        showToast('⏱️ Time\'s up! Work period complete.', 'success', 4000);
+        if (audioContext) playSuccessSound();
+        showReportModal();
+      }
+    }
+
+    // ==================== Attention Signal ====================
+    function triggerAttention(emoji = '🙋', text = 'Eyes Up Front!') {
+      const overlay = document.getElementById('attentionOverlay');
+      document.getElementById('attentionEmoji').textContent = emoji;
+      overlay.querySelector('.attention-text').textContent = text;
+      overlay.classList.add('active');
+    }
+
+    function dismissAttention() {
+      document.getElementById('attentionOverlay').classList.remove('active');
+    }
+
+    // ==================== Session Report ====================
+    function getGrade(quietPct, avgDb, alerts) {
+      // Simple weighted scoring
+      const quietScore = quietPct;  // 0–100
+      const alertPenalty = Math.min(40, alerts * 5);
+      const score = quietScore - alertPenalty;
+      if (score >= 80) return 'A';
+      if (score >= 65) return 'B';
+      if (score >= 45) return 'C';
+      if (score >= 25) return 'D';
+      return 'F';
+    }
+
+    function gradeMessage(grade, quietPct, avgDb) {
+      const msgs = {
+        A: `Outstanding session! The class maintained excellent noise discipline with ${quietPct}% quiet time. Keep it up!`,
+        B: `Good session! ${quietPct}% quiet time is solid. A little more focus would push this to an A.`,
+        C: `Decent effort. ${quietPct}% quiet time shows room for improvement — aim for 70%+ next time.`,
+        D: `Challenging session. The class struggled to stay quiet. Try the 30-second challenge to build the habit.`,
+        F: `Very noisy session. Consider using the Library or Testing preset for stricter thresholds.`
+      };
+      return msgs[grade] || '';
+    }
+
+    function showReportModal() {
+      const modal = document.getElementById('reportModal');
+      const quietPct = totalReadings > 0 ? Math.round((quietReadings / totalReadings) * 100) : 0;
+      const avgDb = readings.length > 0 ? Math.round(readings.reduce((a,b) => a+b,0) / readings.length) : 0;
+      const grade = readings.length > 0 ? getGrade(quietPct, avgDb, alertCount) : '?';
+
+      // Grade badge
+      const gradeEl = document.getElementById('reportGrade');
+      gradeEl.textContent = grade;
+      gradeEl.className = `report-grade grade-${grade.toLowerCase()}`;
+
+      // Subtitle
+      const subtitles = { A:'Excellent work!', B:'Good session!', C:'Decent effort', D:'Needs improvement', F:'Very challenging', '?':'No data yet' };
+      document.getElementById('reportSubtitle').textContent = subtitles[grade] || '';
+
+      // Stats
+      const qt = parseInt(quietThresholdEl.value);
+      const colorClass = (val, good, ok) => val <= good ? 'good' : val <= ok ? 'ok' : 'bad';
+
+      document.getElementById('rAvg').textContent = avgDb ? `${avgDb} dB` : '--';
+      document.getElementById('rAvg').className = `report-stat-value ${avgDb ? colorClass(avgDb, qt, qt+15) : ''}`;
+
+      document.getElementById('rPeak').textContent = maxReading ? `${maxReading} dB` : '--';
+      document.getElementById('rPeak').className = `report-stat-value ${maxReading ? colorClass(maxReading, qt+10, qt+25) : ''}`;
+
+      document.getElementById('rQuiet').textContent = totalReadings ? `${quietPct}%` : '--';
+      document.getElementById('rQuiet').className = `report-stat-value ${totalReadings ? (quietPct>=70?'good':quietPct>=40?'ok':'bad') : ''}`;
+
+      document.getElementById('rAlerts').textContent = readings.length ? alertCount : '--';
+      document.getElementById('rAlerts').className = `report-stat-value ${readings.length ? (alertCount===0?'good':alertCount<=3?'ok':'bad') : ''}`;
+
+      // Duration
+      const elapsed = sessionStartTime ? Math.floor((Date.now() - sessionStartTime) / 1000) : 0;
+      const durMins = Math.floor(elapsed/60), durSecs = elapsed%60;
+      document.getElementById('rDuration').textContent = elapsed ? `${durMins}:${durSecs.toString().padStart(2,'0')}` : '--';
+      document.getElementById('rDuration').className = 'report-stat-value';
+
+      // vs target
+      if (targetDb !== null && avgDb) {
+        const gap = avgDb - targetDb;
+        const gapStr = gap === 0 ? 'On target!' : `${gap > 0 ? '+' : ''}${gap} dB`;
+        document.getElementById('rTarget').textContent = gapStr;
+        document.getElementById('rTarget').className = `report-stat-value ${gap <= 0 ? 'good' : gap <= 5 ? 'ok' : 'bad'}`;
+      } else {
+        document.getElementById('rTarget').textContent = 'No target';
+        document.getElementById('rTarget').className = 'report-stat-value';
+      }
+
+      document.getElementById('reportMessage').textContent = readings.length > 0
+        ? gradeMessage(grade, quietPct, avgDb)
+        : 'Complete a monitoring session to see your full report.';
+
+      modal.classList.add('active');
+    }
+
+    function closeReportModal() {
+      document.getElementById('reportModal').classList.remove('active');
+    }
+
+    // ==================== Noise Thermometer ====================
+    function initThermometer() {
+      const tube = document.getElementById('thermoTube');
+      const ticks = document.getElementById('thermoTicks');
+      ticks.innerHTML = '';
+      // Draw tick marks at 20, 40, 60, 80, 100 dB
+      const minDb = 20, maxDb = 120, tubeH = 240;
+      [20, 40, 60, 80, 100, 120].forEach(db => {
+        const frac = (db - minDb) / (maxDb - minDb);
+        const topPx = tubeH * (1 - frac);
+        const tick = document.createElement('div');
+        tick.className = 'thermo-tick';
+        tick.style.top = topPx + 'px';
+        const lbl = document.createElement('span');
+        lbl.className = 'thermo-tick-label';
+        lbl.style.top = topPx + 'px';
+        lbl.textContent = db;
+        ticks.appendChild(tick);
+        ticks.appendChild(lbl);
+      });
+    }
+
+    function updateThermometer(db) {
+      const minDb = 20, maxDb = 120;
+      const pct = Math.max(0, Math.min(100, ((db - minDb) / (maxDb - minDb)) * 100));
+      document.getElementById('thermoFill').style.height = pct + '%';
+      document.getElementById('thermoDb').textContent = db + ' dB';
+
+      // Colour bulb
+      const bulb = document.getElementById('thermoBulb');
+      const qt = parseInt(quietThresholdEl.value);
+      const wt = parseInt(warningThresholdEl.value);
+      if (db < qt) {
+        bulb.style.background = 'var(--color-quiet)';
+        bulb.style.boxShadow = '0 0 14px rgba(0,255,136,0.6)';
+      } else if (db < wt) {
+        bulb.style.background = 'var(--color-moderate)';
+        bulb.style.boxShadow = '0 0 14px rgba(255,200,0,0.6)';
+      } else {
+        bulb.style.background = 'var(--color-loud)';
+        bulb.style.boxShadow = '0 0 14px rgba(255,50,50,0.7)';
+      }
+    }
+
+    // ==================== Class Name ====================
+    function editClassName() {
+      const input = document.getElementById('classNameInput');
+      const display = document.getElementById('classNameDisplay');
+      input.value = className;
+      input.style.display = 'block';
+      display.style.display = 'none';
+      input.focus();
+      input.select();
+    }
+
+    function saveClassName() {
+      const input = document.getElementById('classNameInput');
+      const display = document.getElementById('classNameDisplay');
+      className = input.value.trim() || '';
+      display.textContent = className || 'Click to set class name';
+      document.getElementById('fsClassName').textContent = className || 'Classroom Noise Monitor';
+      input.style.display = 'none';
+      display.style.display = '';
+      try { localStorage.setItem('cnm_className', className); } catch(e) {}
+    }
+
+    // ==================== Ambient Colour Mode ====================
+    function toggleAmbient() {
+      ambientMode = !ambientMode;
+      const btn = document.getElementById('ambientBtn');
+      if (ambientMode) {
+        document.body.classList.add('ambient');
+        btn.classList.add('on');
+        btn.textContent = '🌈 Ambient ON';
+      } else {
+        document.body.classList.remove('ambient', 'ambient-quiet', 'ambient-moderate', 'ambient-loud');
+        btn.classList.remove('on');
+        btn.textContent = '🌈 Ambient';
+        // Clear projector ambient classes
+        const proj = document.getElementById('projectorOverlay');
+        if (proj) proj.classList.remove('ambient-quiet', 'ambient-moderate', 'ambient-loud');
+      }
+    }
+
+    function updateAmbient(level) {
+      if (!ambientMode) return;
+      document.body.classList.remove('ambient-quiet', 'ambient-moderate', 'ambient-loud');
+      document.body.classList.add('ambient-' + level);
+      // Also apply ambient colour to projector/wall display overlay
+      const proj = document.getElementById('projectorOverlay');
+      if (proj) {
+        proj.classList.remove('ambient-quiet', 'ambient-moderate', 'ambient-loud');
+        proj.classList.add('ambient-' + level);
+      }
+    }
+
+    // ==================== Session History ====================
+    function loadSessionHistory() {
+      try { sessionHistory = JSON.parse(localStorage.getItem('cnm_history') || '[]'); } catch(e) { sessionHistory = []; }
+      renderSessionHistory();
+      renderGradeChart();
+    }
+
+    function saveSessionToHistory(data) {
+      sessionHistory.unshift(data);
+      if (sessionHistory.length > MAX_HISTORY) sessionHistory = sessionHistory.slice(0, MAX_HISTORY);
+      try { localStorage.setItem('cnm_history', JSON.stringify(sessionHistory)); } catch(e) {}
+      renderSessionHistory();
+      renderGradeChart();
+    }
+
+    function renderSessionHistory() {
+      const list = document.getElementById('sessionHistoryList');
+      if (sessionHistory.length === 0) {
+        list.innerHTML = '<div class="no-history">No sessions recorded yet. Complete a monitoring session to see history here.</div>';
+        return;
+      }
+      list.innerHTML = '';
+      sessionHistory.forEach(s => {
+        const item = document.createElement('div');
+        item.className = 'session-history-item';
+
+        const gradeBadge = document.createElement('div');
+        gradeBadge.className = `shi-grade grade-${(s.grade||'?').toLowerCase()}`;
+        gradeBadge.textContent = s.grade || '?';
+
+        const info = document.createElement('div');
+        info.className = 'shi-info';
+        const cn = s.className ? `<strong>${s.className}</strong> · ` : '';
+        info.innerHTML = `<div>${cn}<span class="shi-date">${s.date}</span></div>
+          <div class="shi-stats">
+            <span>Avg ${s.avgDb} dB</span>
+            <span>Quiet ${s.quietPct}%</span>
+            <span>${s.duration}</span>
+            <span>${s.alerts} alerts</span>
+          </div>`;
+
+        // Mini sparkline
+        const sparkline = document.createElement('div');
+        sparkline.className = 'shi-sparkline';
+        if (s.sparkData) {
+          const maxV = Math.max(...s.sparkData, 1);
+          s.sparkData.forEach(v => {
+            const bar = document.createElement('div');
+            bar.className = 'shi-bar';
+            bar.style.height = Math.max(4, (v / maxV) * 28) + 'px';
+            bar.style.background = v < s.quietThreshold ? 'var(--color-quiet)' : v < s.warningThreshold ? 'var(--color-moderate)' : 'var(--color-loud)';
+            sparkline.appendChild(bar);
+          });
+        }
+
+        item.appendChild(gradeBadge);
+        item.appendChild(info);
+        item.appendChild(sparkline);
+        list.appendChild(item);
+      });
+    }
+
+    // ==================== Achievement Badges ====================
+    function loadAchievements() {
+      try {
+        const saved = JSON.parse(localStorage.getItem('cnm_achievements') || '[]');
+        unlockedAchievements = new Set(saved);
+      } catch(e) { unlockedAchievements = new Set(); }
+      renderBadges();
+    }
+
+    function unlockAchievement(id) {
+      if (unlockedAchievements.has(id)) return;
+      unlockedAchievements.add(id);
+      try { localStorage.setItem('cnm_achievements', JSON.stringify([...unlockedAchievements])); } catch(e) {}
+      const a = ACHIEVEMENTS.find(x => x.id === id);
+      if (a) {
+        showToast(`🏆 Achievement unlocked: ${a.name}!`, 'badge', 4000);
+      }
+      renderBadges();
+    }
+
+    function renderBadges() {
+      const grid = document.getElementById('badgesGrid');
+      grid.innerHTML = '';
+      ACHIEVEMENTS.forEach(a => {
+        const badge = document.createElement('div');
+        const unlocked = unlockedAchievements.has(a.id);
+        badge.className = `badge ${unlocked ? 'unlocked' : 'locked'}`;
+        badge.title = a.desc;
+        badge.innerHTML = `<div class="badge-icon">${a.icon}</div><div class="badge-name">${a.name}</div>`;
+        grid.appendChild(badge);
+      });
+    }
+
+    function checkAchievements(sessionData) {
+      unlockAchievement('first_session');
+      if (sessionData.grade === 'A') unlockAchievement('grade_a');
+      if (sessionHistory.length >= 4) unlockAchievement('five_sessions');
+      if (sessionHistory.length >= 9) unlockAchievement('ten_sessions');
+      if (sessionData.alerts === 0 && sessionData.duration !== '0:00') unlockAchievement('zero_alerts');
+      if (sessionData.quietPct >= 80) unlockAchievement('quiet_master');
+      if (starsEarned >= 5) unlockAchievement('all_stars');
+      // consistent: last 3 all B+
+      if (sessionHistory.length >= 2) {
+        const recent3 = [sessionData, ...sessionHistory.slice(0, 2)];
+        if (recent3.every(s => ['A','B'].includes(s.grade))) unlockAchievement('consistent');
+      }
+    }
+
+    // ==================== Custom Attention ====================
+    function sendCustomAttention() {
+      const input = document.getElementById('customAttentionMsg');
+      const msg = input.value.trim();
+      if (!msg) return;
+      triggerAttention('📢', msg);
+      input.value = '';
+    }
+
+    // ==================== Projector / Wall Display ====================
+    function openProjector() {
+      projectorOpen = true;
+      document.getElementById('projectorOverlay').classList.add('active');
+      document.getElementById('projClass').textContent = className || '';
+      updateProjector(null); // initial render
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeProjector() {
+      projectorOpen = false;
+      document.getElementById('projectorOverlay').classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    function updateProjector(db) {
+      if (!projectorOpen) return;
+      const creature = document.getElementById('projCreature');
+      const dbEl     = document.getElementById('projDb');
+      const statEl   = document.getElementById('projStatus');
+      const timerEl  = document.getElementById('projTimer');
+
+      const qt = parseInt(quietThresholdEl.value);
+      const wt = parseInt(warningThresholdEl.value);
+
+      // Level class
+      let levelClass = 'quiet';
+      let statusText = isMonitoring ? 'Perfect! 🟢' : 'Ready';
+      if (db !== null && isMonitoring) {
+        if (db >= parseInt(alertThresholdEl.value)) {
+          levelClass = 'loud'; statusText = 'WAY TOO LOUD! 🔴';
+        } else if (db >= wt) {
+          levelClass = 'loud'; statusText = 'Too Loud! 🔴';
+        } else if (db >= qt) {
+          levelClass = 'moderate'; statusText = 'Getting Louder 🟡';
+        }
+      }
+
+      creature.className = `proj-creature-body ${levelClass}`;
+      dbEl.className = `proj-db ${levelClass}`;
+      dbEl.innerHTML = `${db !== null && isMonitoring ? db : '--'}<span>dB</span>`;
+      statEl.className = `proj-status ${levelClass}`;
+      statEl.textContent = statusText;
+
+      // Score bar = quiet %
+      const quietPct = totalReadings > 0 ? Math.round((quietReadings / totalReadings) * 100) : 0;
+      document.getElementById('projScoreFill').style.width = quietPct + '%';
+      document.getElementById('projScorePct').textContent = quietPct + '% quiet';
+      if (quietPct >= 80) document.getElementById('projScoreFill').style.background = 'linear-gradient(90deg,var(--color-primary),var(--color-quiet))';
+      else if (quietPct >= 50) document.getElementById('projScoreFill').style.background = 'linear-gradient(90deg,var(--color-primary),var(--color-moderate))';
+      else document.getElementById('projScoreFill').style.background = 'linear-gradient(90deg,var(--color-moderate),var(--color-loud))';
+
+      // Stars
+      const filled = Math.min(5, starsEarned);
+      document.getElementById('projStars').textContent = '⭐'.repeat(filled) + '☆'.repeat(5 - filled);
+
+      // Countdown
+      if (countdownActive) {
+        const m = Math.floor(countdownRemaining / 60), s = countdownRemaining % 60;
+        timerEl.textContent = `⏱ ${m}:${s.toString().padStart(2,'0')} remaining`;
+        timerEl.classList.add('show');
+      } else {
+        timerEl.classList.remove('show');
+      }
+    }
+
+    // ==================== Escalating Alerts ====================
+    function updateEscalatingAlert(db) {
+      if (!isMonitoring) { clearAlertStage(); return; }
+      const at = parseInt(alertThresholdEl.value);
+      if (db < at) {
+        loudFrameCount = Math.max(0, loudFrameCount - 2);
+        if (loudFrameCount === 0) clearAlertStage();
+        return;
+      }
+      loudFrameCount++;
+
+      // Stage thresholds (frames at ~30fps sample rate effectively):
+      // Stage 1 warn   after ~2s  (60 frames)
+      // Stage 2 alarm  after ~8s  (240 frames)
+      // Stage 3 critical after ~20s (600 frames)
+      let newStage = 0;
+      if (loudFrameCount > 600) newStage = 3;
+      else if (loudFrameCount > 240) newStage = 2;
+      else if (loudFrameCount > 60)  newStage = 1;
+
+      if (newStage !== alertStage) {
+        alertStage = newStage;
+        applyAlertStage(newStage);
+      }
+    }
+
+    function applyAlertStage(stage) {
+      const bar   = document.getElementById('alertBar');
+      const badge = document.getElementById('alertStageBadge');
+      bar.className   = 'alert-bar';
+      badge.className = 'alert-stage-badge';
+      badge.textContent = '';
+
+      if (stage === 0) { badge.classList.remove('show'); return; }
+
+      const stages = {
+        1: { cls:'warn',     label:'⚠️ Getting Loud — Watch Volume' },
+        2: { cls:'alarm',    label:'🔊 Too Loud! Please Quiet Down' },
+        3: { cls:'critical', label:'🚨 CRITICAL NOISE — Immediate Action Needed' },
+      };
+      const s = stages[stage];
+      bar.classList.add(s.cls);
+      badge.classList.add(s.cls, 'show');
+      badge.textContent = s.label;
+
+      // Auto-trigger attention on critical
+      if (stage === 3 && Date.now() - alertStageSince > 5000) {
+        alertStageSince = Date.now();
+        triggerAttention('🚨', 'Please Quiet Down Now!');
+      }
+    }
+
+    function clearAlertStage() {
+      alertStage = 0; loudFrameCount = 0;
+      document.getElementById('alertBar').className = 'alert-bar';
+      const badge = document.getElementById('alertStageBadge');
+      badge.className = 'alert-stage-badge';
+    }
+
+    // ==================== Calibration Wizard ====================
+    function showCalibration() {
+      if (!isMonitoring) {
+        showToast('Start monitoring first, then calibrate', 'info', 2500);
+        return;
+      }
+      // Reset to step 1
+      ['calStep1','calStep2','calStep3'].forEach(id => document.getElementById(id).classList.remove('active'));
+      document.getElementById('calStep1').classList.add('active');
+      document.getElementById('calibrationModal').classList.add('active');
+    }
+
+    function closeCalibration() {
+      clearInterval(calTimerId);
+      calActive = false;
+      document.getElementById('calibrationModal').classList.remove('active');
+    }
+
+    function startCalibration() {
+      calReadings = [];
+      calSecs = 10;
+      calActive = true;
+      document.getElementById('calStep1').classList.remove('active');
+      document.getElementById('calStep2').classList.add('active');
+
+      const circumference = 2 * Math.PI * 30; // 188.5
+      const ring = document.getElementById('calRingCircle');
+      const numEl = document.getElementById('calRingNum');
+      const barFill = document.getElementById('calBarFill');
+      const liveEl = document.getElementById('calLiveDb');
+
+      calTimerId = setInterval(() => {
+        calSecs--;
+        numEl.textContent = calSecs;
+        const progress = ((10 - calSecs) / 10) * circumference;
+        ring.style.strokeDashoffset = circumference - progress;
+
+        // Sample current dB
+        if (isMonitoring && analyser && dataArray) {
+          analyser.getByteFrequencyData(dataArray);
+          let calSum = 0;
+          for (let i = 0; i < dataArray.length; i++) calSum += dataArray[i] * dataArray[i];
+          const calRms = Math.sqrt(calSum / dataArray.length);
+          const db = Math.round(Math.max(20, Math.min(120, (calRms * parseFloat(sensitivityEl.value) * 0.4) + 20)));
+          calReadings.push(db);
+          liveEl.textContent = db + ' dB';
+          barFill.style.width = ((10 - calSecs) / 10 * 100) + '%';
+        }
+
+        if (calSecs <= 0) {
+          clearInterval(calTimerId);
+          finishCalibration();
+        }
+      }, 1000);
+    }
+
+    function finishCalibration() {
+      calActive = false;
+      if (calReadings.length === 0) { closeCalibration(); return; }
+
+      const sorted = [...calReadings].sort((a,b)=>a-b);
+      const median = sorted[Math.floor(sorted.length / 2)];
+      const quiet  = Math.min(60, Math.round(median + 8));
+      const warn   = Math.min(80, Math.round(median + 18));
+      const alert  = Math.min(100, Math.round(median + 30));
+
+      calResult = { baseline: median, quiet, warn, alert };
+
+      document.getElementById('calResBaseline').textContent = median + ' dB';
+      document.getElementById('calResQuiet').textContent   = quiet  + ' dB';
+      document.getElementById('calResWarn').textContent    = warn   + ' dB';
+      document.getElementById('calResAlert').textContent   = alert  + ' dB';
+
+      const tipText = median < 35
+        ? '✅ Very quiet room detected — thresholds set tightly. Great for testing or library mode.'
+        : median < 50
+        ? '✅ Normal room baseline. Thresholds calibrated for typical classroom use.'
+        : '⚠️ Higher baseline detected. This room has significant background noise — thresholds adjusted accordingly.';
+      document.getElementById('calResultTip').textContent = tipText;
+
+      document.getElementById('calStep2').classList.remove('active');
+      document.getElementById('calStep3').classList.add('active');
+    }
+
+    function applyCalibration() {
+      if (!calResult) return;
+      quietThresholdEl.value   = calResult.quiet;
+      warningThresholdEl.value = calResult.warn;
+      alertThresholdEl.value   = calResult.alert;
+      updateSettingsDisplay();
+      saveSettings();
+      closeCalibration();
+      showToast(`🎚️ Calibrated! Thresholds set for your room (baseline ${calResult.baseline} dB)`, 'success', 3500);
+    }
+
+    // ==================== Grade Chart ====================
+    function renderGradeChart() {
+      const section = document.getElementById('gradeChartSection');
+      const chart   = document.getElementById('gradeChart');
+      if (sessionHistory.length === 0) { section.style.display = 'none'; return; }
+      section.style.display = 'block';
+      chart.innerHTML = '';
+
+      const gradeScore = { A:100, B:80, C:55, D:30, F:10 };
+      const gradeClass = { A:'ga', B:'gb', C:'gc', D:'gd', F:'gf' };
+
+      // Show last 8 sessions, oldest first
+      const sessions = [...sessionHistory].reverse().slice(-8);
+      // Pad to 8 with empty slots
+      while (sessions.length < 8) sessions.unshift(null);
+
+      sessions.forEach(s => {
+        const col = document.createElement('div');
+        col.className = 'grade-col';
+        const bar = document.createElement('div');
+        bar.className = `grade-col-bar ${s ? gradeClass[s.grade] || 'ge' : 'ge'}`;
+        const h = s ? Math.max(8, (gradeScore[s.grade] || 10) * 0.72) : 4;
+        bar.style.height = h + 'px';
+        const lbl = document.createElement('div');
+        lbl.className = 'grade-col-lbl';
+        lbl.textContent = s ? s.grade : '·';
+        col.appendChild(bar);
+        col.appendChild(lbl);
+        chart.appendChild(col);
+      });
+    }
+
+    // ==================== Keyboard Shortcuts ====================
+    document.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT') return;
+
+      if (e.key === ' ') { e.preventDefault(); toggleMonitoring(); }
+      if (e.key === 'f' || e.key === 'F') toggleFullscreen();
+      if (e.key === 'r' || e.key === 'R') resetStats();
+      if (e.key === 't' || e.key === 'T') toggleTheme();
+      if (e.key === 'e' || e.key === 'E') exportLog();
+      if (e.key === 'a' || e.key === 'A') triggerAttention();
+      if (e.key === 'p' || e.key === 'P') showReportModal();
+      if (e.key === 'w' || e.key === 'W') projectorOpen ? closeProjector() : openProjector();
+      if (e.key === 'Escape') {
+        dismissAttention();
+        closeReportModal();
+        closeProjector();
+        if (document.body.classList.contains('fullscreen')) toggleFullscreen();
+      }
+    });
+
+    // ==================== Initialize ====================
+    initVisualizer();
+    initThermometer();
+    loadSettings();
+    loadSessionHistory();
+    loadAchievements();
+    updateSettingsDisplay();
+    updateChallengeDisplay();
+
+    // Custom attention Enter key
+    document.getElementById('customAttentionMsg').addEventListener('keydown', e => {
+      if (e.key === 'Enter') sendCustomAttention();
+    });
+
+    // Dismiss attention overlay on background click
+    document.getElementById('attentionOverlay').addEventListener('click', function(e) {
+      if (e.target === this) dismissAttention();
+    });
+
+    window.addEventListener('resize', () => {
+      if (historyData.length > 0) {
+        updateHistoryChart(historyData[historyData.length - 1]);
+      }
+    });
+  </script>
+</body>
+
+</html>
