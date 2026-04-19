@@ -359,7 +359,8 @@ document.querySelectorAll('.countdown-chip').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.countdown-chip').forEach(b => b.classList.remove('selected'));
     btn.classList.add('selected');
-    countdownMins = parseInt(btn.dataset.mins) || countdownMins;
+    const parsedMins = parseInt(btn.dataset.mins);
+    countdownMins = parsedMins > 0 ? parsedMins : countdownMins;
   });
 });
 
@@ -749,6 +750,7 @@ function updateNoiseDisplay(db) {
 
     // Challenge failure if above quiet threshold
     if (challengeActive) {
+      if (challengeSuccess !== false) showToast('Challenge broken — noise too high!', 'warn');
       challengeSuccess = false;
     }
   } else {
@@ -762,6 +764,7 @@ function updateNoiseDisplay(db) {
     updateAmbient('loud');
 
     if (challengeActive) {
+      if (challengeSuccess !== false) showToast('Challenge broken — noise too high!', 'warn');
       challengeSuccess = false;
     }
   }
@@ -1076,7 +1079,7 @@ function showToast(message, type = 'info', duration = 2800) {
   const container = document.getElementById('toastContainer');
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
-  toast.textContent = message;
+  toast.textContent = message.length > 120 ? message.slice(0, 117) + '…' : message;
   container.appendChild(toast);
 
   setTimeout(() => {
@@ -1214,7 +1217,7 @@ function updateTrend(db) {
   recentReadings.push(db);
   if (recentReadings.length > TREND_WINDOW) recentReadings.shift();
   trendFrameCount++;
-  if (trendFrameCount % 15 !== 0) return; // update every ~15 frames
+  if (trendFrameCount % 8 !== 0) return; // update every ~8 frames
 
   if (recentReadings.length < 10) return;
   const half = Math.floor(recentReadings.length / 2);
@@ -1259,12 +1262,13 @@ function startCountdown() {
 }
 
 function updateCountdownDisplay() {
-  const mins = Math.floor(countdownRemaining / 60);
-  const secs = countdownRemaining % 60;
+  const remaining = countdownRemaining || 0;
+  const mins = Math.floor(remaining / 60);
+  const secs = remaining % 60;
   countdownClockEl.textContent = `${mins}:${secs.toString().padStart(2,'0')}`;
-  const pct = countdownTotal > 0 ? (countdownRemaining / countdownTotal) * 100 : 0;
+  const pct = countdownTotal > 0 ? (remaining / countdownTotal) * 100 : 0;
   countdownFillEl.style.width = pct + '%';
-  if (countdownRemaining <= 60) {
+  if (remaining <= 60) {
     countdownClockEl.classList.add('urgent');
     countdownFillEl.style.background = 'linear-gradient(90deg, var(--color-loud), var(--color-moderate))';
   } else {
@@ -1486,7 +1490,14 @@ function loadSessionHistory() {
 function saveSessionToHistory(data) {
   sessionHistory.unshift(data);
   if (sessionHistory.length > MAX_HISTORY) sessionHistory = sessionHistory.slice(0, MAX_HISTORY);
-  try { localStorage.setItem('cnm_history', JSON.stringify(sessionHistory)); } catch(e) {}
+  try {
+    localStorage.setItem('cnm_history', JSON.stringify(sessionHistory));
+  } catch(e) {
+    if (e.name === 'QuotaExceededError') {
+      sessionHistory = sessionHistory.slice(0, Math.floor(sessionHistory.length / 2));
+      try { localStorage.setItem('cnm_history', JSON.stringify(sessionHistory)); } catch(_) {}
+    }
+  }
   renderSessionHistory();
   renderGradeChart();
 }
@@ -1877,7 +1888,7 @@ function closeShortcutsModal() {
 document.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'INPUT') return;
 
-  if (e.key === ' ') { e.preventDefault(); toggleMonitoring(); }
+  if (e.key === ' ' && !e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey) { e.preventDefault(); toggleMonitoring(); }
   if (e.key === 'f' || e.key === 'F') toggleFullscreen();
   if (e.key === 'r' || e.key === 'R') resetStats();
   if (e.key === 't' || e.key === 'T') toggleTheme();

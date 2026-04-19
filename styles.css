@@ -578,7 +578,7 @@ body.theme-light .preset-tab {
 .grade-col-bar.gc { background:linear-gradient(to top,#cc9000,#ffc800); }
 .grade-col-bar.gd { background:linear-gradient(to top,#cc4400,#ff6b35); }
 .grade-col-bar.gf { background:linear-gradient(to top,#aa0000,#ff3232); }
-.grade-col-bar.ge { background:rgba(255,255,255,0.06); }
+.grade-col-bar.ge { background:rgba(255,255,255,0.06); min-height:0; height:0 !important; }
 .grade-col-lbl { font-size:0.7rem; font-weight:700; color:var(--color-text-muted); }
 
 /* Sound Wave Animation */
@@ -2249,7 +2249,14 @@ body.fullscreen .fullscreen-avg { display: flex; }
 @media print {
   body * { visibility: hidden; }
   #reportPrintArea, #reportPrintArea * { visibility: visible; }
-  #reportPrintArea { position: fixed; inset: 0; padding: 40px; }
+  #reportPrintArea {
+    position: fixed; inset: 0; padding: 40px;
+    background: #fff !important;
+    color: #000 !important;
+  }
+  #reportPrintArea * { color: #000 !important; background: transparent !important; }
+  #reportPrintArea canvas { display: none; }
+  .modal-close-btn { display: none; }
 }
 
 /* ===== Noise Thermometer ===== */
@@ -2583,3 +2590,26 @@ body.ambient.ambient-loud {
   background: rgba(0,255,136,0.08);
 }
 .ambient-btn:hover { background: rgba(255,255,255,0.1); }
+
+/* ===== Projector eye blink ===== */
+@keyframes eyeBlink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95%            { transform: scaleY(0.08); }
+}
+.proj-creature-body.quiet .proj-eye {
+  animation: eyeBlink 3.5s ease-in-out infinite;
+}
+
+/* ===== avg-badge responsive (iPad / narrow) ===== */
+@media (max-width: 600px) {
+  .avg-badge {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+}
+
+/* ===== Thermometer labels — hide on mobile to prevent overlap ===== */
+@media (max-width: 480px) {
+  .thermo-tick-label { display: none; }
+}
