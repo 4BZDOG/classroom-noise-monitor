@@ -723,11 +723,12 @@
       position: absolute;
       left: 0;
       right: 0;
-      height: 2px;
-      background: rgba(255, 255, 255, 0.9);
+      height: 3px;
+      background: rgba(0, 217, 255, 0.95);
       pointer-events: none;
       z-index: 10;
       transition: top 0.15s ease;
+      box-shadow: 0 0 8px rgba(0, 217, 255, 0.6), 0 0 16px rgba(0, 217, 255, 0.3);
     }
 
     .target-line::before {
@@ -1372,6 +1373,17 @@
       color: #1e293b;
     }
 
+    /* Character counter for custom attention input */
+    .custom-attention-count {
+      font-size: 0.7rem;
+      color: var(--color-text-muted);
+      text-align: right;
+      margin-top: 3px;
+      transition: color 0.2s;
+    }
+    .custom-attention-count.near-limit { color: var(--color-moderate); }
+    .custom-attention-count.at-limit { color: var(--color-loud); }
+
     /* Mobile improvements */
     @media (max-width: 480px) {
       .modal {
@@ -1390,6 +1402,19 @@
 
       .header-controls {
         gap: 6px;
+      }
+
+      .visualizer-container {
+        height: 100px;
+      }
+
+      .noise-circle-container {
+        width: 260px;
+        height: 260px;
+      }
+
+      .stats-row {
+        grid-template-columns: repeat(2, 1fr);
       }
     }
 
@@ -2096,7 +2121,7 @@
       flex-shrink: 0;
     }
     .grade-a { background: linear-gradient(135deg, #00ff88, #00d9ff); color: #0a1628; }
-    .grade-b { background: linear-gradient(135deg, #00d9ff, #4fc3f7); color: #0a1628; }
+    .grade-b { background: linear-gradient(135deg, #7ed957, #00d9ff); color: #0a1628; }
     .grade-c { background: linear-gradient(135deg, #ffc800, #ff9500); color: #0a1628; }
     .grade-d { background: linear-gradient(135deg, #ff6b35, #ff3232); color: white; }
     .grade-f { background: linear-gradient(135deg, #ff3232, #c0392b); color: white; }
@@ -3212,9 +3237,10 @@
               <button class="countdown-start-btn" style="background:linear-gradient(135deg,#00ff88,#00d9ff)" onclick="triggerAttention('⭐', &quot;Amazing Work!&quot;)">⭐ Great Job</button>
             </div>
             <div class="custom-attention-row">
-              <input class="custom-attention-input" id="customAttentionMsg" placeholder="Custom message…" maxlength="40">
-              <button class="custom-attention-send" onclick="sendCustomAttention()">Send</button>
+              <input class="custom-attention-input" id="customAttentionMsg" placeholder="Custom message…" maxlength="40" aria-label="Custom attention message">
+              <button class="custom-attention-send" onclick="sendCustomAttention()" aria-label="Send custom attention message">Send</button>
             </div>
+            <div class="custom-attention-count" id="customAttentionCount">0 / 40</div>
           </div>
         </div>
       </div>
@@ -3870,9 +3896,12 @@
         dataArray = null;
       }
 
-      // Stop any active challenge
+      // Stop any active challenge and countdown
       if (challengeActive) {
         stopChallenge();
+      }
+      if (countdownActive) {
+        endCountdown(false);
       }
 
       // Reset display
@@ -3890,13 +3919,19 @@
     }
 
     function resetStats() {
+      if (isMonitoring) {
+        showToast('Stop monitoring before resetting stats.', 'info', 2500);
+        return;
+      }
+      if (readings.length > 0 && !confirm('Clear all session data? This cannot be undone.')) return;
+
       readings = [];
       maxReading = 0;
       alertCount = 0;
       quietReadings = 0;
       totalReadings = 0;
       historyData = [];
-      sessionStartTime = isMonitoring ? Date.now() : null;
+      sessionStartTime = null;
 
       // Reset log & streak
       eventLog = [];
@@ -3920,7 +3955,9 @@
       avgLineEl.style.display = 'none';
 
       // Clear history chart
-      historyCtx.clearRect(0, 0, historyCanvas.width, historyCanvas.height);
+      if (historyCtx && historyCanvas) {
+        historyCtx.clearRect(0, 0, historyCanvas.width, historyCanvas.height);
+      }
     }
 
     // ==================== Calculations ====================
@@ -4358,9 +4395,7 @@
         if (newStars > starsEarned) {
           starsEarned = newStars;
           updateStarDisplay(starsEarned, true);
-          if (starsEarned <= 5) {
-            showToast(`⭐ ${starsEarned} star${starsEarned > 1 ? 's' : ''}! Keep it quiet!`, 'info', 2000);
-          }
+          showToast(`⭐ ${starsEarned} star${starsEarned > 1 ? 's' : ''}! Keep it quiet!`, 'info', 2000);
         } else {
           updateStarDisplay(starsEarned, false);
         }
@@ -4874,6 +4909,8 @@
       if (!msg) return;
       triggerAttention('📢', msg);
       input.value = '';
+      const countEl = document.getElementById('customAttentionCount');
+      if (countEl) { countEl.textContent = '0 / 40'; countEl.className = 'custom-attention-count'; }
     }
 
     // ==================== Projector / Wall Display ====================
@@ -5168,14 +5205,35 @@
     updateSettingsDisplay();
     updateChallengeDisplay();
 
-    // Custom attention Enter key
-    document.getElementById('customAttentionMsg').addEventListener('keydown', e => {
+    // Custom attention: Enter key sends, input shows character counter
+    const customMsgEl = document.getElementById('customAttentionMsg');
+    const customCountEl = document.getElementById('customAttentionCount');
+    customMsgEl.addEventListener('keydown', e => {
       if (e.key === 'Enter') sendCustomAttention();
+    });
+    customMsgEl.addEventListener('input', () => {
+      const len = customMsgEl.value.length;
+      customCountEl.textContent = `${len} / 40`;
+      customCountEl.className = 'custom-attention-count' +
+        (len >= 40 ? ' at-limit' : len >= 30 ? ' near-limit' : '');
+    });
+
+    // Background-click closes all dismissible modals
+    ['reportModal', 'shortcutsModal', 'permissionModal', 'errorModal'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('click', function(e) {
+        if (e.target === this) this.classList.remove('active');
+      });
     });
 
     // Dismiss attention overlay on background click
     document.getElementById('attentionOverlay').addEventListener('click', function(e) {
       if (e.target === this) dismissAttention();
+    });
+
+    // Sync challenge duration button selection with JS state on load
+    document.querySelectorAll('.duration-option').forEach(btn => {
+      btn.classList.toggle('selected', parseInt(btn.dataset.duration) === challengeDuration);
     });
 
     window.addEventListener('resize', () => {
