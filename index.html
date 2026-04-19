@@ -50,9 +50,75 @@
     }
 
     body.theme-light .db-value {
-      background: linear-gradient(180deg, #1e293b 0%, #475569 100%);
+      background: linear-gradient(180deg, #0c4a6e 0%, #1e40af 100%);
       -webkit-background-clip: text;
       background-clip: text;
+    }
+
+    body.theme-light .icon-btn:hover {
+      background: rgba(0, 0, 0, 0.18);
+    }
+
+    body.theme-light .preset-tab {
+      border-color: rgba(0, 0, 0, 0.2);
+      color: #1e293b;
+    }
+
+    body.theme-light .preset-tab:hover {
+      border-color: var(--color-primary);
+      background: rgba(0, 217, 255, 0.12);
+    }
+
+    body.theme-light .challenge-section,
+    body.theme-light .event-log-panel,
+    body.theme-light .session-history-panel,
+    body.theme-light .badges-section,
+    body.theme-light .controls-panel {
+      background: rgba(255, 255, 255, 0.75);
+      border-color: rgba(0, 0, 0, 0.08);
+    }
+
+    body.theme-light .log-entry {
+      color: #334155;
+      border-bottom-color: rgba(0, 0, 0, 0.06);
+    }
+
+    body.theme-light .log-time {
+      color: #64748b;
+    }
+
+    body.theme-light .session-history-item {
+      background: rgba(255, 255, 255, 0.6);
+      border-color: rgba(0, 0, 0, 0.08);
+    }
+
+    body.theme-light .badge.locked {
+      background: rgba(0, 0, 0, 0.06);
+    }
+
+    body.theme-light .history-chart {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    body.theme-light .countdown-bar {
+      background: rgba(255, 255, 255, 0.7);
+      border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    body.theme-light .modal {
+      background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+      color: #1e293b;
+      border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    body.theme-light .modal p {
+      color: #475569;
+    }
+
+    body.theme-light .modal-btn.secondary {
+      background: rgba(0, 0, 0, 0.08);
+      color: #1e293b;
+      border-color: rgba(0, 0, 0, 0.15);
     }
 
     .container {
@@ -342,8 +408,6 @@
       align-items: center;
       justify-content: center;
     }
-    .character { display: none !important; }
-
     .creature { position: relative; width: 76px; height: 76px; display: flex; align-items: center; justify-content: center; }
     .creature-body {
       width: 76px; height: 76px; border-radius: 50%;
@@ -1259,6 +1323,74 @@
       background: rgba(255, 255, 255, 0.1);
       color: white;
       border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    /* Keyboard Shortcuts Modal */
+    .shortcuts-modal {
+      max-width: 480px;
+      text-align: left;
+    }
+
+    .shortcuts-modal h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .shortcuts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 24px;
+      margin-bottom: 24px;
+    }
+
+    .shortcut-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.9rem;
+    }
+
+    .shortcut-row .kbd {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 32px;
+      height: 28px;
+      padding: 0 8px;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    body.theme-light .shortcut-row .kbd {
+      background: rgba(0, 0, 0, 0.08);
+      border-color: rgba(0, 0, 0, 0.2);
+      color: #1e293b;
+    }
+
+    /* Mobile improvements */
+    @media (max-width: 480px) {
+      .modal {
+        padding: 28px 20px;
+        border-radius: 18px;
+        max-width: calc(100vw - 32px);
+      }
+
+      .modal-overlay {
+        padding: 16px;
+      }
+
+      .shortcuts-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .header-controls {
+        gap: 6px;
+      }
     }
 
     /* Fullscreen Mode */
@@ -2574,6 +2706,28 @@
       </div>
     </div>
   </div>
+  <!-- Keyboard Shortcuts Modal -->
+  <div class="modal-overlay" id="shortcutsModal" role="dialog" aria-modal="true" aria-labelledby="shortcutsTitle">
+    <div class="modal shortcuts-modal">
+      <h2 id="shortcutsTitle">⌨️ Keyboard Shortcuts</h2>
+      <div class="shortcuts-grid">
+        <div class="shortcut-row"><span class="kbd">Space</span><span>Start / Stop</span></div>
+        <div class="shortcut-row"><span class="kbd">F</span><span>Fullscreen</span></div>
+        <div class="shortcut-row"><span class="kbd">T</span><span>Toggle theme</span></div>
+        <div class="shortcut-row"><span class="kbd">A</span><span>Attention signal</span></div>
+        <div class="shortcut-row"><span class="kbd">W</span><span>Wall display</span></div>
+        <div class="shortcut-row"><span class="kbd">R</span><span>Reset stats</span></div>
+        <div class="shortcut-row"><span class="kbd">P</span><span>Session report</span></div>
+        <div class="shortcut-row"><span class="kbd">E</span><span>Export CSV</span></div>
+        <div class="shortcut-row"><span class="kbd">?</span><span>This help panel</span></div>
+        <div class="shortcut-row"><span class="kbd">Esc</span><span>Close overlays</span></div>
+      </div>
+      <div class="modal-btns">
+        <button class="modal-btn primary" onclick="closeShortcutsModal()">Got it</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="permissionModal">
     <div class="modal">
       <span class="modal-icon">🎤</span>
@@ -2603,12 +2757,12 @@
   <div class="container">
     <header>
       <div class="header-controls">
-        <button class="ambient-btn" id="ambientBtn" onclick="toggleAmbient()" title="Ambient colour mode">🌈 Ambient</button>
-        <button class="proj-btn" onclick="openProjector()" title="Projector mode (W)">📽️ Wall Display</button>
-        <button class="attention-btn tooltip" data-tooltip="Attention Signal (A)" onclick="triggerAttention()">
+        <button class="ambient-btn" id="ambientBtn" onclick="toggleAmbient()" title="Ambient colour mode" aria-label="Toggle ambient colour mode">🌈 Ambient</button>
+        <button class="proj-btn" onclick="openProjector()" title="Projector mode (W)" aria-label="Open wall display / projector mode">📽️ Wall Display</button>
+        <button class="attention-btn tooltip" data-tooltip="Attention Signal (A)" aria-label="Trigger attention signal" onclick="triggerAttention()">
           🙋 Attention
         </button>
-        <button class="icon-btn tooltip" id="themeToggle" data-tooltip="Toggle Theme (T)" onclick="toggleTheme()">
+        <button class="icon-btn tooltip" id="themeToggle" data-tooltip="Toggle Theme (T)" aria-label="Toggle light/dark theme" onclick="toggleTheme()">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="5"></circle>
             <line x1="12" y1="1" x2="12" y2="3"></line>
@@ -2621,12 +2775,18 @@
             <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
           </svg>
         </button>
-        <button class="icon-btn tooltip" id="fullscreenBtn" data-tooltip="Fullscreen (F)" onclick="toggleFullscreen()">
+        <button class="icon-btn tooltip" id="fullscreenBtn" data-tooltip="Fullscreen (F)" aria-label="Toggle fullscreen" onclick="toggleFullscreen()">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="15 3 21 3 21 9"></polyline>
             <polyline points="9 21 3 21 3 15"></polyline>
             <line x1="21" y1="3" x2="14" y2="10"></line>
             <line x1="3" y1="21" x2="10" y2="14"></line>
+          </svg>
+        </button>
+        <button class="icon-btn tooltip" data-tooltip="Keyboard shortcuts (?)" aria-label="Show keyboard shortcuts" onclick="showShortcutsModal()">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="4" width="20" height="16" rx="3"></rect>
+            <path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10"></path>
           </svg>
         </button>
       </div>
@@ -2744,7 +2904,7 @@
             <div class="trend-arrow" id="trendArrow"></div>
             <div class="db-value" id="dbValue">--</div>
             <div class="db-label">decibels</div>
-            <div class="status-text status-quiet" id="statusText">Ready to Start</div>
+            <div class="status-text status-quiet" id="statusText" aria-live="polite" role="status">Ready to Start</div>
             <div class="star-bar" id="starBar">
               <span class="star" data-star="1">⭐</span>
               <span class="star" data-star="2">⭐</span>
@@ -2882,7 +3042,7 @@
             </svg>
             Session Report
           </button>
-          <button class="start-btn inactive" id="startBtn" onclick="toggleMonitoring()">
+          <button class="start-btn inactive" id="startBtn" onclick="toggleMonitoring()" aria-label="Start monitoring">
             <svg class="icon" viewBox="0 0 24 24" fill="currentColor" id="btnIcon">
               <polygon points="5 3 19 12 5 21 5 3"></polygon>
             </svg>
@@ -3262,7 +3422,7 @@
 
     // History canvas
     const historyCanvas = document.getElementById('historyCanvas');
-    const historyCtx = historyCanvas.getContext('2d');
+    const historyCtx = historyCanvas ? historyCanvas.getContext('2d') : null;
 
     // Alert timing
     let lastAlertTime = 0;
@@ -3307,16 +3467,23 @@
       } catch(e) {}
     }
 
+    // Cached visualizer bar elements — populated by initVisualizer()
+    let cachedBars = [];
+
     // ==================== Initialize ====================
     function initVisualizer() {
       visualizerEl.innerHTML = '';
       const barCount = 80;
+      const fragment = document.createDocumentFragment();
+      cachedBars = [];
       for (let i = 0; i < barCount; i++) {
         const bar = document.createElement('div');
         bar.className = 'bar';
         bar.style.height = '4px';
-        visualizerEl.appendChild(bar);
+        cachedBars.push(bar);
+        fragment.appendChild(bar);
       }
+      visualizerEl.appendChild(fragment);
       // Re-append overlay elements after clearing (they were wiped by innerHTML='')
       visualizerEl.appendChild(targetLineEl);
       visualizerEl.appendChild(avgLineEl);
@@ -3456,7 +3623,7 @@
       btn.addEventListener('click', () => {
         document.querySelectorAll('.duration-option').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
-        challengeDuration = parseInt(btn.dataset.duration);
+        challengeDuration = parseInt(btn.dataset.duration) || challengeDuration;
         challengeRemaining = challengeDuration;
         updateChallengeDisplay();
       });
@@ -3467,7 +3634,7 @@
       btn.addEventListener('click', () => {
         document.querySelectorAll('.countdown-chip').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
-        countdownMins = parseInt(btn.dataset.mins);
+        countdownMins = parseInt(btn.dataset.mins) || countdownMins;
       });
     });
 
@@ -3619,11 +3786,13 @@
       // Reset per-session transient state
       smoothedDb = 40;
       recentReadings = [];
+      trendFrameCount = 0;
 
       isMonitoring = true;
       startBtn.classList.remove('inactive');
       startBtn.classList.add('active');
       btnText.textContent = 'Stop Monitoring';
+      startBtn.setAttribute('aria-label', 'Stop monitoring');
       btnIcon.innerHTML = '<rect x="6" y="4" width="4" height="16" fill="currentColor"></rect><rect x="14" y="4" width="4" height="16" fill="currentColor"></rect>';
       noiseCircleEl.classList.add('monitoring');
 
@@ -3674,6 +3843,7 @@
       startBtn.classList.remove('active');
       startBtn.classList.add('inactive');
       btnText.textContent = 'Start Monitoring';
+      startBtn.setAttribute('aria-label', 'Start monitoring');
       btnIcon.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
       noiseCircleEl.classList.remove('monitoring');
 
@@ -3691,7 +3861,9 @@
         if (audioContext._stream) {
           audioContext._stream.getTracks().forEach(track => track.stop());
         }
-        audioContext.close().catch(() => {});
+        if (audioContext.state !== 'closed') {
+          audioContext.close().catch(() => {});
+        }
         audioContext = null;
         analyser = null;
         microphone = null;
@@ -3714,8 +3886,7 @@
       resetQuietStreak();
 
       // Reset visualizer
-      const bars = visualizerEl.querySelectorAll('.bar');
-      bars.forEach(bar => bar.style.height = '4px');
+      cachedBars.forEach(bar => bar.style.height = '4px');
     }
 
     function resetStats() {
@@ -3795,14 +3966,12 @@
 
     function updateVisualizer() {
       analyser.getByteFrequencyData(dataArray);
-      const bars = visualizerEl.querySelectorAll('.bar');
-      const step = Math.floor(dataArray.length / bars.length);
+      const step = Math.floor(dataArray.length / cachedBars.length);
 
-      bars.forEach((bar, index) => {
-        const value = dataArray[index * step];
-        const height = Math.max(4, (value / 255) * 120);
-        bar.style.height = height + 'px';
-      });
+      for (let i = 0; i < cachedBars.length; i++) {
+        const value = dataArray[i * step] || 0;
+        cachedBars[i].style.height = Math.max(4, (value / 255) * 120) + 'px';
+      }
     }
 
     function updateNoiseDisplay(db) {
@@ -3927,6 +4096,8 @@
     }
 
     function updateHistoryChart(db) {
+      if (!historyCtx || !historyCanvas) return;
+
       historyData.push(db);
       if (historyData.length > maxHistoryPoints) {
         historyData.shift();
@@ -4603,14 +4774,29 @@
 
         const info = document.createElement('div');
         info.className = 'shi-info';
-        const cn = s.className ? `<strong>${s.className}</strong> · ` : '';
-        info.innerHTML = `<div>${cn}<span class="shi-date">${s.date}</span></div>
-          <div class="shi-stats">
-            <span>Avg ${s.avgDb} dB</span>
-            <span>Quiet ${s.quietPct}%</span>
-            <span>${s.duration}</span>
-            <span>${s.alerts} alerts</span>
-          </div>`;
+
+        const infoTop = document.createElement('div');
+        if (s.className) {
+          const cnStrong = document.createElement('strong');
+          cnStrong.textContent = s.className;
+          infoTop.appendChild(cnStrong);
+          infoTop.appendChild(document.createTextNode(' · '));
+        }
+        const dateSpan = document.createElement('span');
+        dateSpan.className = 'shi-date';
+        dateSpan.textContent = s.date;
+        infoTop.appendChild(dateSpan);
+
+        const statsDiv = document.createElement('div');
+        statsDiv.className = 'shi-stats';
+        [`Avg ${s.avgDb} dB`, `Quiet ${s.quietPct}%`, s.duration, `${s.alerts} alerts`].forEach(txt => {
+          const sp = document.createElement('span');
+          sp.textContent = txt;
+          statsDiv.appendChild(sp);
+        });
+
+        info.appendChild(infoTop);
+        info.appendChild(statsDiv);
 
         // Mini sparkline
         const sparkline = document.createElement('div');
@@ -4669,8 +4855,8 @@
     function checkAchievements(sessionData) {
       unlockAchievement('first_session');
       if (sessionData.grade === 'A') unlockAchievement('grade_a');
-      if (sessionHistory.length >= 4) unlockAchievement('five_sessions');
-      if (sessionHistory.length >= 9) unlockAchievement('ten_sessions');
+      if (sessionHistory.length >= 5) unlockAchievement('five_sessions');
+      if (sessionHistory.length >= 10) unlockAchievement('ten_sessions');
       if (sessionData.alerts === 0 && sessionData.duration !== '0:00') unlockAchievement('zero_alerts');
       if (sessionData.quietPct >= 80) unlockAchievement('quiet_master');
       if (starsEarned >= 5) unlockAchievement('all_stars');
@@ -4942,6 +5128,15 @@
       });
     }
 
+    // ==================== Keyboard Shortcuts Modal ====================
+    function showShortcutsModal() {
+      document.getElementById('shortcutsModal').classList.add('active');
+    }
+
+    function closeShortcutsModal() {
+      document.getElementById('shortcutsModal').classList.remove('active');
+    }
+
     // ==================== Keyboard Shortcuts ====================
     document.addEventListener('keydown', (e) => {
       if (e.target.tagName === 'INPUT') return;
@@ -4954,10 +5149,12 @@
       if (e.key === 'a' || e.key === 'A') triggerAttention();
       if (e.key === 'p' || e.key === 'P') showReportModal();
       if (e.key === 'w' || e.key === 'W') projectorOpen ? closeProjector() : openProjector();
+      if (e.key === '?' || e.key === '/') showShortcutsModal();
       if (e.key === 'Escape') {
         dismissAttention();
         closeReportModal();
         closeProjector();
+        closeShortcutsModal();
         if (document.body.classList.contains('fullscreen')) toggleFullscreen();
       }
     });
