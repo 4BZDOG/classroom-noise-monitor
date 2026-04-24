@@ -2016,3 +2016,80 @@ window.addEventListener('resize', () => {
     updateHistoryChart(historyData[historyData.length - 1]);
   }
 });
+
+// ==================== Tooltip Engine ====================
+(function initTooltips() {
+  const tip = document.createElement('div');
+  tip.id = 'tooltip';
+  document.body.appendChild(tip);
+
+  let showTimer = null;
+  let currentTarget = null;
+
+  function position(anchor) {
+    const r   = anchor.getBoundingClientRect();
+    const tw  = tip.offsetWidth;
+    const th  = tip.offsetHeight;
+    const vw  = window.innerWidth;
+    const vh  = window.innerHeight;
+    const gap = 9;
+    const pad = 10;
+
+    // Prefer above; fall back to below when there is not enough room
+    let top, cls;
+    if (r.top - th - gap >= pad) {
+      top = r.top - th - gap;
+      cls = 'tip-above';
+    } else {
+      top = r.bottom + gap;
+      cls = 'tip-below';
+    }
+
+    let left = r.left + r.width / 2 - tw / 2;
+    left = Math.max(pad, Math.min(left, vw - tw - pad));
+    top  = Math.min(top, vh - th - pad);
+
+    tip.style.top  = top + 'px';
+    tip.style.left = left + 'px';
+    tip.className  = cls + ' visible';
+  }
+
+  function show(anchor) {
+    const text = anchor.dataset.tip;
+    if (!text) return;
+    tip.textContent = text;
+    // Render off-screen first so we can measure actual dimensions
+    tip.style.left = '-9999px';
+    tip.style.top  = '0';
+    tip.className  = '';
+    requestAnimationFrame(() => position(anchor));
+  }
+
+  function hide() {
+    clearTimeout(showTimer);
+    showTimer = null;
+    tip.className = '';
+    currentTarget = null;
+  }
+
+  document.addEventListener('mouseover', e => {
+    const el = e.target.closest('[data-tip]');
+    if (el === currentTarget) return;
+    hide();
+    currentTarget = el;
+    if (el) showTimer = setTimeout(() => show(el), 320);
+  });
+
+  // Hide when the pointer leaves the document entirely
+  document.addEventListener('mouseleave', hide);
+
+  // Keyboard: show on focus, hide on blur
+  document.addEventListener('focusin', e => {
+    const el = e.target.closest('[data-tip]');
+    if (el) { hide(); currentTarget = el; show(el); }
+  });
+  document.addEventListener('focusout', hide);
+
+  window.addEventListener('scroll', hide, { passive: true });
+  window.addEventListener('resize', hide, { passive: true });
+})();

@@ -196,12 +196,16 @@
   <div class="container">
     <header>
       <div class="header-controls">
-        <button class="ambient-btn" id="ambientBtn" onclick="toggleAmbient()" title="Ambient colour mode" aria-label="Toggle ambient colour mode">🌈 Ambient</button>
-        <button class="proj-btn" onclick="openProjector()" title="Projector mode (W)" aria-label="Open wall display / projector mode">📽️ Wall Display</button>
-        <button class="attention-btn tooltip" data-tooltip="Attention Signal (A)" aria-label="Trigger attention signal" onclick="triggerAttention()">
+        <button class="ambient-btn" id="ambientBtn" onclick="toggleAmbient()" aria-label="Toggle ambient colour mode"
+          data-tip="Ambient mode — the page background shifts colour with the noise level (quiet = green, moderate = yellow, loud = red)">🌈 Ambient</button>
+        <button class="proj-btn" onclick="openProjector()" aria-label="Open wall display / projector mode"
+          data-tip="Wall Display — opens a full-screen creature and score board designed to be projected so students can see their noise level (W)">📽️ Wall Display</button>
+        <button class="attention-btn" aria-label="Trigger attention signal" onclick="triggerAttention()"
+          data-tip="Attention Signal — flashes a full-screen prompt to get the class's attention instantly, without shouting (A)">
           🙋 Attention
         </button>
-        <button class="icon-btn tooltip" id="themeToggle" data-tooltip="Toggle Theme (T)" aria-label="Toggle light/dark theme" onclick="toggleTheme()">
+        <button class="icon-btn" id="themeToggle" aria-label="Toggle light/dark theme" onclick="toggleTheme()"
+          data-tip="Toggle dark / light theme (T)">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="5"></circle>
             <line x1="12" y1="1" x2="12" y2="3"></line>
@@ -214,7 +218,8 @@
             <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
           </svg>
         </button>
-        <button class="icon-btn tooltip" id="fullscreenBtn" data-tooltip="Fullscreen (F)" aria-label="Toggle fullscreen" onclick="toggleFullscreen()">
+        <button class="icon-btn" id="fullscreenBtn" aria-label="Toggle fullscreen" onclick="toggleFullscreen()"
+          data-tip="Toggle fullscreen — hides the settings panel and enlarges the noise circle (F)">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="15 3 21 3 21 9"></polyline>
             <polyline points="9 21 3 21 3 15"></polyline>
@@ -222,7 +227,8 @@
             <line x1="3" y1="21" x2="10" y2="14"></line>
           </svg>
         </button>
-        <button class="icon-btn tooltip" data-tooltip="Keyboard shortcuts (?)" aria-label="Show keyboard shortcuts" onclick="showShortcutsModal()">
+        <button class="icon-btn" aria-label="Show keyboard shortcuts" onclick="showShortcutsModal()"
+          data-tip="Keyboard shortcuts — view all available hotkeys (?)">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="2" y="4" width="20" height="16" rx="3"></rect>
             <path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10"></path>
@@ -245,7 +251,8 @@
         Classroom Noise Monitor
       </h1>
       <div class="class-name-banner">
-        <span class="class-name-display" id="classNameDisplay" onclick="editClassName()" title="Click to set your class name">Click to set class name</span>
+        <span class="class-name-display" id="classNameDisplay" onclick="editClassName()" tabindex="0"
+          data-tip="Click to set your class name — it appears in session reports and on the Wall Display">Click to set class name</span>
         <input class="class-name-input" id="classNameInput" placeholder="e.g. Room 12 — Period 3" maxlength="40" onblur="saveClassName()" onkeydown="if(event.key==='Enter') saveClassName()">
       </div>
       <p>Keep your classroom at the perfect volume level</p>
@@ -254,7 +261,8 @@
 
     <!-- Preset Tabs -->
     <div class="preset-tabs">
-      <button class="preset-tab active" data-preset="custom" onclick="applyPreset('custom')">
+      <button class="preset-tab active" data-preset="custom" onclick="applyPreset('custom')"
+        data-tip="Custom — adjust all thresholds manually using the sliders in the Settings panel">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="3"></circle>
           <path
@@ -263,14 +271,16 @@
         </svg>
         Custom
       </button>
-      <button class="preset-tab" data-preset="library" onclick="applyPreset('library')">
+      <button class="preset-tab" data-preset="library" onclick="applyPreset('library')"
+        data-tip="Library — near-silent thresholds: quiet below 30 dB · warning at 45 dB · alert at 55 dB. Use for independent reading or exams.">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
           <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
         </svg>
         Library
       </button>
-      <button class="preset-tab" data-preset="groupwork" onclick="applyPreset('groupwork')">
+      <button class="preset-tab" data-preset="groupwork" onclick="applyPreset('groupwork')"
+        data-tip="Group Work — relaxed thresholds: quiet below 50 dB · warning at 65 dB · alert at 80 dB. Allows productive collaboration noise.">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
           <circle cx="9" cy="7" r="4"></circle>
@@ -279,7 +289,8 @@
         </svg>
         Group Work
       </button>
-      <button class="preset-tab" data-preset="presentation" onclick="applyPreset('presentation')">
+      <button class="preset-tab" data-preset="presentation" onclick="applyPreset('presentation')"
+        data-tip="Presentation — moderate thresholds: quiet below 35 dB · warning at 50 dB · alert at 65 dB. Good for whole-class teaching.">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
           <line x1="8" y1="21" x2="16" y2="21"></line>
@@ -287,7 +298,8 @@
         </svg>
         Presentation
       </button>
-      <button class="preset-tab" data-preset="testing" onclick="applyPreset('testing')">
+      <button class="preset-tab" data-preset="testing" onclick="applyPreset('testing')"
+        data-tip="Testing / Exam — very strict thresholds: quiet below 25 dB · warning at 40 dB · alert at 50 dB. For maximum silence.">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
           <polyline points="14 2 14 8 20 8"></polyline>
@@ -303,7 +315,8 @@
       <!-- Circle + Thermometer row -->
       <div class="circle-thermo-row">
         <!-- Noise Thermometer -->
-        <div class="thermometer-wrap">
+        <div class="thermometer-wrap" tabindex="0"
+          data-tip="Noise thermometer — bar fills with the current dB reading. Colour shifts from green (quiet) through yellow (warning) to red (loud).">
           <div class="thermo-label">Level</div>
           <div style="position:relative; display:flex; align-items:flex-end; gap:6px;">
             <div class="thermo-tube" id="thermoTube">
@@ -340,11 +353,13 @@
               </div>
               <span class="character" id="character" style="display:none"></span>
             </div>
-            <div class="trend-arrow" id="trendArrow"></div>
+            <div class="trend-arrow" id="trendArrow"
+              data-tip="Trend indicator — ↑ noise is rising · → noise is stable · ↓ noise is falling. Updates every ~8 frames."></div>
             <div class="db-value" id="dbValue">--</div>
             <div class="db-label">decibels</div>
             <div class="status-text status-quiet" id="statusText" aria-live="polite" role="status">Ready to Start</div>
-            <div class="star-bar" id="starBar">
+            <div class="star-bar" id="starBar"
+              data-tip="Stars — earn 1 star for every 10 consecutive seconds the class stays below the quiet threshold. Resets when noise rises.">
               <span class="star" data-star="1">⭐</span>
               <span class="star" data-star="2">⭐</span>
               <span class="star" data-star="3">⭐</span>
@@ -368,7 +383,8 @@
       <!-- Visualizer with clickable target line -->
       <div class="visualizer-wrapper">
         <div class="visualizer-hint">🎯 Click anywhere on the equalizer to set your target level</div>
-        <div class="visualizer-container" id="visualizer">
+        <div class="visualizer-container" id="visualizer"
+          data-tip="Equaliser — live frequency display. Click anywhere to set a target dB level; a line marks your goal and the rolling average line shows how close the class is.">
           <!-- Target level line -->
           <div class="target-line" id="targetLine" style="top: 50%; display: none;">
             <div class="target-handle"></div>
@@ -391,11 +407,13 @@
             <div class="countdown-fill" id="countdownFill" style="width:100%"></div>
           </div>
         </div>
-        <button class="countdown-end-btn" onclick="endCountdown()">End Early</button>
+        <button class="countdown-end-btn" onclick="endCountdown()"
+          data-tip="Stop the countdown timer early and show the session report">End Early</button>
       </div>
 
       <!-- Prominent Average Badge -->
-      <div class="avg-badge" id="avgBadge">
+      <div class="avg-badge" id="avgBadge" tabindex="0"
+        data-tip="Session average — rolling mean of all readings. Click the equaliser above to set a target dB and see how close you are.">
         <div class="avg-badge-icon">📊</div>
         <div class="avg-badge-content">
           <div class="avg-badge-label">Session Average</div>
@@ -417,27 +435,32 @@
 
     <!-- Stats -->
     <div class="stats-row">
-      <div class="stat-card">
+      <div class="stat-card" tabindex="0"
+        data-tip="Rolling average of all noise readings this session">
         <div class="stat-icon">📊</div>
         <div class="stat-value" id="avgLevel">--</div>
         <div class="stat-label">Average dB</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card" tabindex="0"
+        data-tip="Highest noise level recorded this session">
         <div class="stat-icon">📈</div>
         <div class="stat-value" id="maxLevel">--</div>
         <div class="stat-label">Peak dB</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card" tabindex="0"
+        data-tip="Percentage of readings that stayed below the quiet threshold — higher is better">
         <div class="stat-icon">🤫</div>
         <div class="stat-value" id="quietTime">--</div>
         <div class="stat-label">Quiet Time</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card" tabindex="0"
+        data-tip="Number of noise alerts triggered this session — fires each time noise exceeds the alert threshold">
         <div class="stat-icon">⚠️</div>
         <div class="stat-value" id="alertCount">0</div>
         <div class="stat-label">Alerts</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card" tabindex="0"
+        data-tip="Elapsed time since you clicked Start Monitoring">
         <div class="stat-icon">⏱️</div>
         <div class="stat-value" id="sessionTime">0:00</div>
         <div class="stat-label">Session</div>
@@ -457,14 +480,16 @@
           Settings
         </h2>
         <div class="btn-group">
-          <button class="reset-btn" onclick="resetStats()">
+          <button class="reset-btn" onclick="resetStats()"
+            data-tip="Clear all session statistics and the event log — asks for confirmation first (R)">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="1 4 1 10 7 10"></polyline>
               <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
             </svg>
             Reset
           </button>
-          <button class="export-btn" onclick="exportLog()" id="exportBtn">
+          <button class="export-btn" onclick="exportLog()" id="exportBtn"
+            data-tip="Download the event log as a CSV file for analysis in a spreadsheet (E)">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
               <polyline points="7 10 12 15 17 10"></polyline>
@@ -472,7 +497,8 @@
             </svg>
             Export CSV
           </button>
-          <button class="export-btn" onclick="showReportModal()" id="reportBtn">
+          <button class="export-btn" onclick="showReportModal()" id="reportBtn"
+            data-tip="View your session grade (A–F), detailed statistics, and personalised feedback (P)">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
               <polyline points="14 2 14 8 20 8"></polyline>
@@ -481,7 +507,8 @@
             </svg>
             Session Report
           </button>
-          <button class="start-btn inactive" id="startBtn" onclick="toggleMonitoring()" aria-label="Start monitoring">
+          <button class="start-btn inactive" id="startBtn" onclick="toggleMonitoring()" aria-label="Start monitoring"
+            data-tip="Request microphone access and begin measuring noise levels in real time (Space)">
             <svg class="icon" viewBox="0 0 24 24" fill="currentColor" id="btnIcon">
               <polygon points="5 3 19 12 5 21 5 3"></polygon>
             </svg>
@@ -491,7 +518,8 @@
       </div>
 
       <div class="settings-grid">
-        <div class="setting-item">
+        <div class="setting-item"
+          data-tip="Amplification applied to the microphone signal. Raise if readings seem too low for your room — lower if they spike too easily.">
           <label>
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
@@ -506,10 +534,12 @@
             <span>Less Sensitive</span>
             <span>More Sensitive</span>
           </div>
-          <button class="calibrate-btn" onclick="showCalibration()">🎚️ Auto-Calibrate Room</button>
+          <button class="calibrate-btn" onclick="showCalibration()"
+            data-tip="Measure the room's baseline noise for 10 seconds and automatically calculate ideal thresholds — start monitoring first">🎚️ Auto-Calibrate Room</button>
         </div>
 
-        <div class="setting-item">
+        <div class="setting-item"
+          data-tip="Quiet threshold — below this dB level the room is rated Quiet and the circle shows green. Default: 40 dB.">
           <label>
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#00ff88" stroke-width="2">
               <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
@@ -525,7 +555,8 @@
           </div>
         </div>
 
-        <div class="setting-item">
+        <div class="setting-item"
+          data-tip="Warning threshold — above this level the circle turns yellow. Must be higher than the quiet threshold. Default: 60 dB.">
           <label>
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#ffc800" stroke-width="2">
               <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
@@ -542,7 +573,8 @@
           </div>
         </div>
 
-        <div class="setting-item">
+        <div class="setting-item"
+          data-tip="Alert threshold — above this level a noise alert fires and the circle turns red. Must exceed the warning threshold. Default: 75 dB.">
           <label>
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#ff3232" stroke-width="2">
               <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon>
@@ -559,7 +591,8 @@
           </div>
         </div>
 
-        <div class="setting-item">
+        <div class="setting-item"
+          data-tip="Sound alerts — play a short beep when noise crosses the alert threshold">
           <div class="toggle-container">
             <label>
               <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -575,7 +608,8 @@
           </div>
         </div>
 
-        <div class="setting-item">
+        <div class="setting-item"
+          data-tip="Visual flash alerts — flash a red overlay on screen when noise crosses the alert threshold">
           <div class="toggle-container">
             <label>
               <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -592,7 +626,8 @@
       </div>
 
       <!-- Quiet Challenge -->
-      <div class="challenge-section" id="challengeSection">
+      <div class="challenge-section" id="challengeSection"
+        data-tip="Quiet Challenge — give the class a timed goal to stay below the quiet threshold. Any noise above the warning threshold counts as a failure.">
         <div class="challenge-header">
           <h3>
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -613,7 +648,8 @@
           <div class="challenge-progress-bar" id="challengeProgressBar" style="width: 0%"></div>
         </div>
         <div class="challenge-btns">
-          <button class="challenge-btn start" id="challengeStartBtn" onclick="toggleChallenge()">Start
+          <button class="challenge-btn start" id="challengeStartBtn" onclick="toggleChallenge()"
+            data-tip="Start the timed quiet challenge — the progress bar fills as time passes; loud noise stops it early">Start
             Challenge</button>
         </div>
         <div class="challenge-result" id="challengeResult"></div>
@@ -639,7 +675,8 @@
               <button class="countdown-chip" data-mins="30">30 min</button>
             </div>
             <div class="tool-card-action">
-              <button class="countdown-start-btn" onclick="startCountdown()">▶ Start Timer</button>
+              <button class="countdown-start-btn" onclick="startCountdown()"
+                data-tip="Start the work period countdown — plays a chime and shows the session report when time is up">▶ Start Timer</button>
             </div>
           </div>
           <div class="tool-card">
@@ -651,7 +688,8 @@
               <button class="countdown-start-btn attention-signal-btn-ok" onclick="triggerAttention('⭐', &quot;Amazing Work!&quot;)">⭐ Great Job</button>
             </div>
             <div class="custom-attention-row">
-              <input class="custom-attention-input" id="customAttentionMsg" placeholder="Custom message…" maxlength="40" aria-label="Custom attention message">
+              <input class="custom-attention-input" id="customAttentionMsg" placeholder="Custom message…" maxlength="40" aria-label="Custom attention message"
+                data-tip="Type a custom message (up to 40 characters) then press Enter or Send to flash it full-screen">
               <button class="custom-attention-send" onclick="sendCustomAttention()" aria-label="Send custom attention message">Send</button>
             </div>
             <div class="custom-attention-count" id="customAttentionCount">0 / 40</div>
@@ -670,7 +708,8 @@
         <div class="session-history-list" id="sessionHistoryList">
           <div class="no-history">No sessions recorded yet. Complete a monitoring session to see history here.</div>
         </div>
-        <div class="grade-chart-section" id="gradeChartSection" style="display:none">
+        <div class="grade-chart-section" id="gradeChartSection" tabindex="0" style="display:none"
+          data-tip="Grade trend across your last 8 sessions — A is best, F is worst. Bars fill left to right from oldest to most recent.">
           <div class="grade-chart-title">Grade Trend (most recent →)</div>
           <div class="grade-chart" id="gradeChart"></div>
         </div>
@@ -688,13 +727,15 @@
           </svg>
           Noise Level History
         </h3>
-        <div class="history-chart">
+        <div class="history-chart" tabindex="0"
+          data-tip="Noise history graph — the scrolling line shows noise over time. Green line = quiet threshold, yellow line = warning threshold.">
           <canvas id="historyCanvas" class="history-canvas"></canvas>
         </div>
       </div>
 
       <!-- Event Log -->
-      <div class="log-section">
+      <div class="log-section"
+        data-tip="Event log — records noise level changes during the session, throttled to one entry per 3 seconds. Export as CSV to analyse later.">
         <div class="log-header">
           <h3>
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
