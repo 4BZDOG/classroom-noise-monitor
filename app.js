@@ -199,6 +199,21 @@ function loadSettings() {
   } catch(e) {
     console.warn('Failed to load class name from localStorage:', e);
   }
+
+  // Theme preference
+  try {
+    if (localStorage.getItem('cnm_theme') === 'light') {
+      document.body.classList.add('theme-light');
+    }
+  } catch(e) { console.warn('Failed to load theme preference:', e); }
+
+  // Active preset tab highlight (values already loaded from settings above)
+  try {
+    const savedPreset = localStorage.getItem('cnm_preset') || 'custom';
+    document.querySelectorAll('.preset-tab').forEach(tab => {
+      tab.classList.toggle('active', tab.dataset.preset === savedPreset);
+    });
+  } catch(e) { console.warn('Failed to load preset preference:', e); }
 }
 
 // Cached visualizer bar elements — populated by initVisualizer()
@@ -329,6 +344,11 @@ function updateSettingsDisplay() {
   document.getElementById('warningValue').textContent = warningThresholdEl.value + ' dB';
   document.getElementById('alertValue').textContent = alertThresholdEl.value + ' dB';
 
+  updateSliderTrack(sensitivityEl);
+  updateSliderTrack(quietThresholdEl);
+  updateSliderTrack(warningThresholdEl);
+  updateSliderTrack(alertThresholdEl);
+
   // Ensure thresholds are logical
   const quiet = parseInt(quietThresholdEl.value);
   const warning = parseInt(warningThresholdEl.value);
@@ -344,11 +364,28 @@ function updateSettingsDisplay() {
   }
 }
 
-// Add event listeners
-sensitivityEl.addEventListener('input', () => { updateSettingsDisplay(); saveSettings(); });
-quietThresholdEl.addEventListener('input', () => { updateSettingsDisplay(); saveSettings(); });
-warningThresholdEl.addEventListener('input', () => { updateSettingsDisplay(); saveSettings(); });
-alertThresholdEl.addEventListener('input', () => { updateSettingsDisplay(); saveSettings(); });
+// Slider fill-track: shows filled portion as a tinted gradient on the track
+function updateSliderTrack(el) {
+  const min = parseFloat(el.min) || 0;
+  const max = parseFloat(el.max) || 100;
+  const pct = Math.round(((parseFloat(el.value) - min) / (max - min)) * 100);
+  el.style.setProperty('--slider-fill', pct + '%');
+}
+
+// Switches preset tab highlight to "Custom" when a slider is touched manually
+function onSliderChange() {
+  updateSettingsDisplay();
+  saveSettings();
+  document.querySelectorAll('.preset-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.preset === 'custom');
+  });
+  try { localStorage.setItem('cnm_preset', 'custom'); } catch(e) { console.warn('Failed to save preset:', e); }
+}
+
+sensitivityEl.addEventListener('input', onSliderChange);
+quietThresholdEl.addEventListener('input', onSliderChange);
+warningThresholdEl.addEventListener('input', onSliderChange);
+alertThresholdEl.addEventListener('input', onSliderChange);
 soundAlertsEl.addEventListener('change', saveSettings);
 visualAlertsEl.addEventListener('change', saveSettings);
 
@@ -955,12 +992,17 @@ function applyPreset(presetName) {
     warningThresholdEl.value = preset.warning;
     alertThresholdEl.value = preset.alert;
     updateSettingsDisplay();
+    saveSettings();
+    try { localStorage.setItem('cnm_preset', presetName); } catch(e) { console.warn('Failed to save preset:', e); }
   }
 }
 
 // ==================== Theme ====================
 function toggleTheme() {
   document.body.classList.toggle('theme-light');
+  try {
+    localStorage.setItem('cnm_theme', document.body.classList.contains('theme-light') ? 'light' : 'dark');
+  } catch(e) { console.warn('Failed to save theme preference:', e); }
 }
 
 // ==================== Fullscreen ====================
@@ -1628,9 +1670,9 @@ function checkAchievements(sessionData) {
   if (sessionData.alerts === 0 && sessionData.duration !== '0:00') unlockAchievement('zero_alerts');
   if (sessionData.quietPct >= 80) unlockAchievement('quiet_master');
   if (starsEarned >= 5) unlockAchievement('all_stars');
-  // consistent: last 3 all B+
-  if (sessionHistory.length >= 2) {
-    const recent3 = [sessionData, ...sessionHistory.slice(0, 2)];
+  // consistent: 3 consecutive B+ — sessionHistory already has sessionData at [0] after unshift
+  if (sessionHistory.length >= 3) {
+    const recent3 = sessionHistory.slice(0, 3);
     if (recent3.every(s => ['A','B'].includes(s.grade))) unlockAchievement('consistent');
   }
 }

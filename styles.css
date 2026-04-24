@@ -113,6 +113,75 @@ body.theme-light .modal-btn.secondary {
   border-color: rgba(0, 0, 0, 0.15);
 }
 
+/* ── Additional light-theme overrides ── */
+
+body.theme-light .avg-badge {
+  background: rgba(255, 255, 255, 0.75);
+  border-color: rgba(0, 0, 0, 0.07);
+}
+
+body.theme-light .avg-badge-sub {
+  color: #475569;
+}
+
+body.theme-light .session-tools {
+  background: rgba(0, 217, 255, 0.04);
+  border-color: rgba(0, 217, 255, 0.18);
+}
+
+body.theme-light .tool-card {
+  background: rgba(255, 255, 255, 0.65);
+  border-color: rgba(0, 0, 0, 0.06);
+}
+
+body.theme-light .tool-card h4 {
+  color: #1e293b;
+}
+
+body.theme-light .history-panel {
+  background: rgba(255, 255, 255, 0.75);
+  border-color: rgba(0, 0, 0, 0.07);
+}
+
+body.theme-light .log-list {
+  background: rgba(0, 0, 0, 0.04);
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+}
+
+body.theme-light .log-empty {
+  color: #64748b;
+}
+
+body.theme-light .stat-value {
+  background: linear-gradient(135deg, #0284c7, #0d9488);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+body.theme-light .class-name-input {
+  color: #1e293b;
+  background: rgba(0, 217, 255, 0.06);
+}
+
+body.theme-light .challenge-timer {
+  color: #059669;
+}
+
+body.theme-light .challenge-btn.cancel {
+  background: rgba(0, 0, 0, 0.08);
+  color: #1e293b;
+}
+
+body.theme-light .thermo-db-readout {
+  color: #0284c7;
+}
+
+body.theme-light .history-section h3,
+body.theme-light .log-header h3 {
+  color: #1e293b;
+}
+
 .container {
   max-width: 1200px;
   margin: 0 auto;
@@ -1084,9 +1153,14 @@ body.theme-light .reset-btn {
   width: 100%;
   height: 8px;
   border-radius: 4px;
-  background: var(--color-bg-dark);
+  background: linear-gradient(to right, var(--color-primary) var(--slider-fill, 50%), rgba(255, 255, 255, 0.12) var(--slider-fill, 50%));
   outline: none;
   -webkit-appearance: none;
+  cursor: pointer;
+}
+
+body.theme-light .setting-item input[type="range"] {
+  background: linear-gradient(to right, var(--color-primary) var(--slider-fill, 50%), rgba(0, 0, 0, 0.12) var(--slider-fill, 50%));
 }
 
 .setting-item input[type="range"]::-webkit-slider-thumb {
@@ -2246,6 +2320,17 @@ body.fullscreen .fullscreen-avg { display: flex; }
   color: #ccd6f6;
 }
 
+.tool-card-action {
+  margin-top: 12px;
+}
+
+.tool-card-desc {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
 @media print {
   body * { visibility: hidden; }
   #reportPrintArea, #reportPrintArea * { visibility: visible; }
@@ -2612,4 +2697,59 @@ body.ambient.ambient-loud {
 /* ===== Thermometer labels — hide on mobile to prevent overlap ===== */
 @media (max-width: 480px) {
   .thermo-tick-label { display: none; }
+}
+
+/* ===== Keyboard focus-visible ring ===== */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+button:focus:not(:focus-visible),
+input:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ===== Monitoring-active glow on start button ===== */
+.start-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.start-btn.active {
+  animation: monitoring-glow 2s ease-in-out infinite;
+}
+
+@keyframes monitoring-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 50, 50, 0); }
+  50%       { box-shadow: 0 0 0 8px rgba(255, 50, 50, 0.22); }
+}
+
+/* ===== Reduced-motion accessibility ===== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.1ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ===== Attention signal button colour variants ===== */
+.attention-signal-btn-warn {
+  background: linear-gradient(135deg, #ffc800, #ff9500) !important;
+  color: var(--color-bg-dark) !important;
+}
+
+.attention-signal-btn-loud {
+  background: linear-gradient(135deg, #ff3232, #ff6b35) !important;
+  color: white !important;
+}
+
+.attention-signal-btn-ok {
+  background: linear-gradient(135deg, #00ff88, #00d9ff) !important;
+  color: var(--color-bg-dark) !important;
 }

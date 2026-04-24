@@ -638,17 +638,17 @@
               <button class="countdown-chip" data-mins="25">25 min</button>
               <button class="countdown-chip" data-mins="30">30 min</button>
             </div>
-            <div style="margin-top:12px;">
+            <div class="tool-card-action">
               <button class="countdown-start-btn" onclick="startCountdown()">▶ Start Timer</button>
             </div>
           </div>
           <div class="tool-card">
             <h4>🙋 Attention Signal</h4>
-            <p style="font-size:0.82rem;color:var(--color-text-muted);margin-bottom:12px;">Flash a full-screen signal to get the class's attention instantly — no shouting needed.</p>
+            <p class="tool-card-desc">Flash a full-screen signal to get the class's attention instantly — no shouting needed.</p>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
-              <button class="countdown-start-btn" style="background:linear-gradient(135deg,#ffc800,#ff9500)" onclick="triggerAttention('🙋', &quot;Eyes Up Front!&quot;)">🙋 Eyes Up</button>
-              <button class="countdown-start-btn" style="background:linear-gradient(135deg,#ff3232,#ff6b35)" onclick="triggerAttention('🤫', &quot;Shhh — Too Loud!&quot;)">🤫 Too Loud</button>
-              <button class="countdown-start-btn" style="background:linear-gradient(135deg,#00ff88,#00d9ff)" onclick="triggerAttention('⭐', &quot;Amazing Work!&quot;)">⭐ Great Job</button>
+              <button class="countdown-start-btn attention-signal-btn-warn" onclick="triggerAttention('🙋', &quot;Eyes Up Front!&quot;)">🙋 Eyes Up</button>
+              <button class="countdown-start-btn attention-signal-btn-loud" onclick="triggerAttention('🤫', &quot;Shhh — Too Loud!&quot;)">🤫 Too Loud</button>
+              <button class="countdown-start-btn attention-signal-btn-ok" onclick="triggerAttention('⭐', &quot;Amazing Work!&quot;)">⭐ Great Job</button>
             </div>
             <div class="custom-attention-row">
               <input class="custom-attention-input" id="customAttentionMsg" placeholder="Custom message…" maxlength="40" aria-label="Custom attention message">
