@@ -148,6 +148,7 @@ const sessionTimeEl = document.getElementById('sessionTime');
 // History canvas
 const historyCanvas = document.getElementById('historyCanvas');
 const historyCtx = historyCanvas ? historyCanvas.getContext('2d') : null;
+let _histCanvasW = 0, _histCanvasH = 0, _histCanvasDpr = 0;
 
 // Alert timing
 let lastAlertTime = 0;
@@ -164,32 +165,40 @@ function saveSettings() {
       visualAlerts: visualAlertsEl.checked,
       targetDb: targetDb
     }));
-  } catch(e) {}
+  } catch(e) {
+    console.warn('Failed to save settings to localStorage:', e);
+  }
 }
 
 function loadSettings() {
   try {
     const s = JSON.parse(localStorage.getItem('cnm_settings') || '{}');
-    if (s.sensitivity)       sensitivityEl.value       = s.sensitivity;
-    if (s.quietThreshold)    quietThresholdEl.value    = s.quietThreshold;
-    if (s.warningThreshold)  warningThresholdEl.value  = s.warningThreshold;
-    if (s.alertThreshold)    alertThresholdEl.value    = s.alertThreshold;
+    if (s.sensitivity)       sensitivityEl.value       = Math.max(0.5, Math.min(3, parseFloat(s.sensitivity) || 1.5));
+    if (s.quietThreshold)    quietThresholdEl.value    = Math.max(20, Math.min(60, parseInt(s.quietThreshold) || 40));
+    if (s.warningThreshold)  warningThresholdEl.value  = Math.max(40, Math.min(80, parseInt(s.warningThreshold) || 60));
+    if (s.alertThreshold)    alertThresholdEl.value    = Math.max(50, Math.min(100, parseInt(s.alertThreshold) || 75));
     if (s.soundAlerts !== undefined) soundAlertsEl.checked = s.soundAlerts;
     if (s.visualAlerts !== undefined) visualAlertsEl.checked = s.visualAlerts;
     if (s.targetDb !== null && s.targetDb !== undefined) {
       setTimeout(() => setTargetDb(s.targetDb), 50);
     }
-  } catch(e) {}
+  } catch(e) {
+    console.warn('Failed to load settings from localStorage:', e);
+  }
 
   // Class name
   try {
     const cn = localStorage.getItem('cnm_className') || '';
     if (cn) {
       className = cn;
-      document.getElementById('classNameDisplay').textContent = cn;
-      document.getElementById('fsClassName').textContent = cn;
+      const classNameDisplay = document.getElementById('classNameDisplay');
+      const fsClassName = document.getElementById('fsClassName');
+      if (classNameDisplay) classNameDisplay.textContent = cn;
+      if (fsClassName) fsClassName.textContent = cn;
     }
-  } catch(e) {}
+  } catch(e) {
+    console.warn('Failed to load class name from localStorage:', e);
+  }
 }
 
 // Cached visualizer bar elements — populated by initVisualizer()
@@ -588,7 +597,7 @@ function stopMonitoring() {
       audioContext._stream.getTracks().forEach(track => track.stop());
     }
     if (audioContext.state !== 'closed') {
-      audioContext.close().catch(() => {});
+      audioContext.close().catch(e => console.warn('Error closing AudioContext:', e));
     }
     audioContext = null;
     analyser = null;
@@ -819,7 +828,7 @@ function updateStats(db) {
     maxLevelEl.textContent = maxReading;
   }
 
-  const quietPercent = Math.round((quietReadings / totalReadings) * 100);
+  const quietPercent = totalReadings > 0 ? Math.round((quietReadings / totalReadings) * 100) : 0;
   quietTimeEl.textContent = quietPercent + '%';
 
   // Update prominent average badge and avg line on visualizer
@@ -843,12 +852,22 @@ function updateHistoryChart(db) {
   }
 
   const dpr = window.devicePixelRatio || 1;
-  historyCanvas.width = historyCanvas.offsetWidth * dpr;
-  historyCanvas.height = historyCanvas.offsetHeight * dpr;
-  historyCtx.scale(dpr, dpr);
+  const cssW = historyCanvas.offsetWidth;
+  const cssH = historyCanvas.offsetHeight;
 
-  const width = historyCanvas.offsetWidth;
-  const height = historyCanvas.offsetHeight;
+  if (cssW === 0 || cssH === 0) return;
+
+  if (cssW !== _histCanvasW || cssH !== _histCanvasH || dpr !== _histCanvasDpr) {
+    _histCanvasW = cssW;
+    _histCanvasH = cssH;
+    _histCanvasDpr = dpr;
+    historyCanvas.width = cssW * dpr;
+    historyCanvas.height = cssH * dpr;
+    historyCtx.scale(dpr, dpr);
+  }
+
+  const width = cssW;
+  const height = cssH;
 
   historyCtx.clearRect(0, 0, width, height);
 
@@ -1447,7 +1466,7 @@ function saveClassName() {
   document.getElementById('fsClassName').textContent = className || 'Classroom Noise Monitor';
   input.style.display = 'none';
   display.style.display = '';
-  try { localStorage.setItem('cnm_className', className); } catch(e) {}
+  try { localStorage.setItem('cnm_className', className); } catch(e) { console.warn('Failed to save class name:', e); }
 }
 
 // ==================== Ambient Colour Mode ====================
@@ -1495,7 +1514,11 @@ function saveSessionToHistory(data) {
   } catch(e) {
     if (e.name === 'QuotaExceededError') {
       sessionHistory = sessionHistory.slice(0, Math.floor(sessionHistory.length / 2));
-      try { localStorage.setItem('cnm_history', JSON.stringify(sessionHistory)); } catch(_) {}
+      try { localStorage.setItem('cnm_history', JSON.stringify(sessionHistory)); } catch(e2) {
+        console.warn('Failed to save session history after truncation:', e2);
+      }
+    } else {
+      console.warn('Failed to save session history:', e);
     }
   }
   renderSessionHistory();
@@ -1576,7 +1599,7 @@ function loadAchievements() {
 function unlockAchievement(id) {
   if (unlockedAchievements.has(id)) return;
   unlockedAchievements.add(id);
-  try { localStorage.setItem('cnm_achievements', JSON.stringify([...unlockedAchievements])); } catch(e) {}
+  try { localStorage.setItem('cnm_achievements', JSON.stringify([...unlockedAchievements])); } catch(e) { console.warn('Failed to save achievements:', e); }
   const a = ACHIEVEMENTS.find(x => x.id === id);
   if (a) {
     showToast(`🏆 Achievement unlocked: ${a.name}!`, 'badge', 4000);
