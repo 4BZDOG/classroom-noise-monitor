@@ -164,7 +164,7 @@ function saveSettings() {
       visualAlerts: visualAlertsEl.checked,
       targetDb: targetDb
     }));
-  } catch(e) {}
+  } catch(e) { console.warn('Could not save settings:', e); }
 }
 
 function loadSettings() {
@@ -179,7 +179,7 @@ function loadSettings() {
     if (s.targetDb !== null && s.targetDb !== undefined) {
       setTimeout(() => setTargetDb(s.targetDb), 50);
     }
-  } catch(e) {}
+  } catch(e) { console.warn('Could not load settings:', e); }
 
   // Class name
   try {
@@ -189,7 +189,7 @@ function loadSettings() {
       document.getElementById('classNameDisplay').textContent = cn;
       document.getElementById('fsClassName').textContent = cn;
     }
-  } catch(e) {}
+  } catch(e) { console.warn('Could not load class name:', e); }
 }
 
 // Cached visualizer bar elements — populated by initVisualizer()
@@ -661,6 +661,24 @@ function resetStats() {
 }
 
 // ==================== Calculations ====================
+// Internal relative-dB scale shared by every display. Not real-world SPL.
+const DB_MIN = 20;
+const DB_MAX = 120;
+
+// Single source of truth for the RMS → dB conversion. Used by both live
+// monitoring (calculateDB) and the calibration sampler so the two can never
+// measure on different scales.
+function rmsToDb(rms, sensitivity) {
+  return Math.max(DB_MIN, Math.min(DB_MAX, (rms * sensitivity * 0.4) + DB_MIN));
+}
+
+// Map a dB reading to a Y pixel within a chart of the given height, using the
+// real DB_MIN..DB_MAX range so loud readings no longer clip off the top.
+function dbToChartY(db, height) {
+  const frac = Math.max(0, Math.min(1, (db - DB_MIN) / (DB_MAX - DB_MIN)));
+  return height - frac * height;
+}
+
 function calculateDB() {
   analyser.getByteFrequencyData(dataArray);
 
@@ -670,8 +688,7 @@ function calculateDB() {
   }
   const rms = Math.sqrt(sum / dataArray.length);
 
-  const sensitivity = parseFloat(sensitivityEl.value);
-  const rawDb = Math.min(120, Math.max(20, (rms * sensitivity * 0.4) + 20));
+  const rawDb = rmsToDb(rms, parseFloat(sensitivityEl.value));
 
   // Exponential moving average — faster rise, slower fall for natural feel
   const alpha = rawDb > smoothedDb ? 0.25 : 0.12;
@@ -702,7 +719,8 @@ function updateProgressRing(db) {
 }
 
 function updateVisualizer() {
-  analyser.getByteFrequencyData(dataArray);
+  // dataArray was already refreshed by calculateDB() earlier this frame —
+  // reuse it instead of issuing a second getByteFrequencyData read.
   const step = Math.floor(dataArray.length / cachedBars.length);
 
   for (let i = 0; i < cachedBars.length; i++) {
@@ -834,6 +852,17 @@ function updateSessionTime() {
   sessionTimeEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
+// Size the canvas backing store to its CSS box × devicePixelRatio. Setting
+// canvas.width/height resets the context transform, so the DPR scale is
+// (re)applied here. Call once on init and on window resize — NOT per frame.
+function resizeHistoryCanvas() {
+  if (!historyCtx || !historyCanvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  historyCanvas.width = historyCanvas.offsetWidth * dpr;
+  historyCanvas.height = historyCanvas.offsetHeight * dpr;
+  historyCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
 function updateHistoryChart(db) {
   if (!historyCtx || !historyCanvas) return;
 
@@ -842,11 +871,7 @@ function updateHistoryChart(db) {
     historyData.shift();
   }
 
-  const dpr = window.devicePixelRatio || 1;
-  historyCanvas.width = historyCanvas.offsetWidth * dpr;
-  historyCanvas.height = historyCanvas.offsetHeight * dpr;
-  historyCtx.scale(dpr, dpr);
-
+  // Draw in CSS pixels; the context is already DPR-scaled by resizeHistoryCanvas().
   const width = historyCanvas.offsetWidth;
   const height = historyCanvas.offsetHeight;
 
@@ -858,14 +883,14 @@ function updateHistoryChart(db) {
   // Draw threshold lines
   historyCtx.setLineDash([5, 5]);
 
-  const quietY = height - (quietThreshold / 100) * height;
+  const quietY = dbToChartY(quietThreshold, height);
   historyCtx.strokeStyle = 'rgba(0, 255, 136, 0.4)';
   historyCtx.beginPath();
   historyCtx.moveTo(0, quietY);
   historyCtx.lineTo(width, quietY);
   historyCtx.stroke();
 
-  const warningY = height - (warningThreshold / 100) * height;
+  const warningY = dbToChartY(warningThreshold, height);
   historyCtx.strokeStyle = 'rgba(255, 200, 0, 0.4)';
   historyCtx.beginPath();
   historyCtx.moveTo(0, warningY);
@@ -889,7 +914,7 @@ function updateHistoryChart(db) {
 
   historyData.forEach((value, index) => {
     const x = index * stepX;
-    const y = height - (value / 100) * height;
+    const y = dbToChartY(value, height);
     historyCtx.lineTo(x, y);
   });
 
@@ -912,7 +937,7 @@ function updateHistoryChart(db) {
   historyCtx.beginPath();
   historyData.forEach((value, index) => {
     const x = index * stepX;
-    const y = height - (value / 100) * height;
+    const y = dbToChartY(value, height);
 
     if (index === 0) {
       historyCtx.moveTo(x, y);
@@ -1303,10 +1328,14 @@ function dismissAttention() {
 
 // ==================== Session Report ====================
 function getGrade(quietPct, avgDb, alerts) {
-  // Simple weighted scoring
-  const quietScore = quietPct;  // 0–100
+  // Weighted scoring: reward quiet time, penalise noise alerts, and also
+  // penalise a high average level so a session that hovers loud-but-just-under
+  // the alert threshold the whole time can't still score an A.
+  const quietScore = quietPct;                              // 0–100
   const alertPenalty = Math.min(40, alerts * 5);
-  const score = quietScore - alertPenalty;
+  // No penalty up to a calm ~45 baseline, scaling to a 25-point cap when loud.
+  const loudnessPenalty = Math.max(0, Math.min(25, Math.round((avgDb - 45) * 0.6)));
+  const score = quietScore - alertPenalty - loudnessPenalty;
   if (score >= 80) return 'A';
   if (score >= 65) return 'B';
   if (score >= 45) return 'C';
@@ -1651,11 +1680,14 @@ function updateProjector(db) {
   // Level class
   let levelClass = 'quiet';
   let statusText = isMonitoring ? 'Perfect! 🟢' : 'Ready';
+  // Level mapping mirrors updateNoiseDisplay() so the wall display and the main
+  // screen never show different colours for the same reading: the warning..alert
+  // band is moderate (yellow); only at/above the alert threshold is it loud (red).
   if (db !== null && isMonitoring) {
     if (db >= parseInt(alertThresholdEl.value)) {
       levelClass = 'loud'; statusText = 'WAY TOO LOUD! 🔴';
     } else if (db >= wt) {
-      levelClass = 'loud'; statusText = 'Too Loud! 🔴';
+      levelClass = 'moderate'; statusText = 'Too Loud! 🟡';
     } else if (db >= qt) {
       levelClass = 'moderate'; statusText = 'Getting Louder 🟡';
     }
@@ -1791,7 +1823,7 @@ function startCalibration() {
       let calSum = 0;
       for (let i = 0; i < dataArray.length; i++) calSum += dataArray[i] * dataArray[i];
       const calRms = Math.sqrt(calSum / dataArray.length);
-      const db = Math.round(Math.max(20, Math.min(120, (calRms * parseFloat(sensitivityEl.value) * 0.4) + 20)));
+      const db = Math.round(rmsToDb(calRms, parseFloat(sensitivityEl.value)));
       calReadings.push(db);
       liveEl.textContent = db + ' dB';
       barFill.style.width = ((10 - calSecs) / 10 * 100) + '%';
@@ -1886,7 +1918,9 @@ function closeShortcutsModal() {
 
 // ==================== Keyboard Shortcuts ====================
 document.addEventListener('keydown', (e) => {
-  if (e.target.tagName === 'INPUT') return;
+  // Don't hijack single-key shortcuts while the user is typing in any field.
+  const t = e.target;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
 
   if (e.key === ' ' && !e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey) { e.preventDefault(); toggleMonitoring(); }
   if (e.key === 'f' || e.key === 'F') toggleFullscreen();
@@ -1909,6 +1943,7 @@ document.addEventListener('keydown', (e) => {
 // ==================== Initialize ====================
 initVisualizer();
 initThermometer();
+resizeHistoryCanvas();
 loadSettings();
 loadSessionHistory();
 loadAchievements();
@@ -1947,7 +1982,10 @@ document.querySelectorAll('.duration-option').forEach(btn => {
 });
 
 window.addEventListener('resize', () => {
+  resizeHistoryCanvas();
   if (historyData.length > 0) {
-    updateHistoryChart(historyData[historyData.length - 1]);
+    // Re-draw without appending a new sample (pop the one updateHistoryChart re-adds).
+    const last = historyData.pop();
+    updateHistoryChart(last);
   }
 });

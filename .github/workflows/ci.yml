@@ -1,0 +1,24 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Zero-dependency syntax gate: catches typos and broken JS before deploy.
+      # The app is buildless, so this is a lightweight stand-in for a test suite.
+      - name: Check app.js syntax
+        run: node --check app.js
