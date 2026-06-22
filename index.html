@@ -5,6 +5,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Classroom Noise Monitor</title>
+  <meta name="description" content="A privacy-first classroom noise monitor. Live decibel levels, presets, challenges and a wall display to help keep your classroom at the perfect volume — all on-device, nothing recorded.">
+  <meta name="theme-color" content="#00d9ff">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300d9ff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z'/%3E%3Cpath d='M19 10v2a7 7 0 0 1-14 0v-2'/%3E%3Cline x1='12' y1='19' x2='12' y2='23'/%3E%3Cline x1='8' y1='23' x2='16' y2='23'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="styles.css">
 </head>
 
@@ -21,12 +24,12 @@
   </div>
 
   <!-- Session Report Modal -->
-  <div class="modal-overlay" id="reportModal">
+  <div class="modal-overlay" id="reportModal" role="dialog" aria-modal="true" aria-labelledby="reportTitle">
     <div class="report-modal" id="reportPrintArea">
       <div class="report-header">
         <div class="report-grade" id="reportGrade">A</div>
         <div class="report-title-block">
-          <h2>Session Report</h2>
+          <h2 id="reportTitle">Session Report</h2>
           <p id="reportSubtitle">Great job keeping things quiet!</p>
         </div>
       </div>
@@ -102,10 +105,10 @@
   </div>
 
   <!-- Calibration Wizard Modal -->
-  <div class="modal-overlay" id="calibrationModal">
+  <div class="modal-overlay" id="calibrationModal" role="dialog" aria-modal="true" aria-labelledby="calTitle">
     <div class="cal-modal">
       <div class="cal-head">
-        <h2>🎚️ Room Calibration</h2>
+        <h2 id="calTitle">🎚️ Room Calibration</h2>
         <p>Automatically sets thresholds based on your room's ambient noise — takes just 10 seconds.</p>
       </div>
       <div class="cal-body">
@@ -167,10 +170,10 @@
     </div>
   </div>
 
-  <div class="modal-overlay" id="permissionModal">
+  <div class="modal-overlay" id="permissionModal" role="dialog" aria-modal="true" aria-labelledby="permissionTitle">
     <div class="modal">
       <span class="modal-icon">🎤</span>
-      <h2>Microphone Access Required</h2>
+      <h2 id="permissionTitle">Microphone Access Required</h2>
       <p>This app needs access to your microphone to monitor classroom noise levels. No audio is recorded or stored -
         everything stays on your device.</p>
       <div class="modal-btns">
@@ -181,7 +184,7 @@
   </div>
 
   <!-- Error Modal -->
-  <div class="modal-overlay" id="errorModal">
+  <div class="modal-overlay" id="errorModal" role="dialog" aria-modal="true" aria-labelledby="errorModalTitle">
     <div class="modal">
       <span class="modal-icon">⚠️</span>
       <h2 id="errorModalTitle">Error</h2>
@@ -245,7 +248,7 @@
         Classroom Noise Monitor
       </h1>
       <div class="class-name-banner">
-        <span class="class-name-display" id="classNameDisplay" onclick="editClassName()" title="Click to set your class name">Click to set class name</span>
+        <span class="class-name-display" id="classNameDisplay" role="button" tabindex="0" onclick="editClassName()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();editClassName();}" title="Click to set your class name" aria-label="Set class name">Click to set class name</span>
         <input class="class-name-input" id="classNameInput" placeholder="e.g. Room 12 — Period 3" maxlength="40" onblur="saveClassName()" onkeydown="if(event.key==='Enter') saveClassName()">
       </div>
       <p>Keep your classroom at the perfect volume level</p>

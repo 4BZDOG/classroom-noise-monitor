@@ -99,6 +99,7 @@ const presets = {
   presentation: { quiet: 35, warning: 50, alert: 65, sensitivity: 1.8 },
   testing: { quiet: 25, warning: 40, alert: 50, sensitivity: 2.5 }
 };
+let activePreset = 'custom';
 
 // ==================== DOM Elements ====================
 const dbValueEl = document.getElementById('dbValue');
@@ -162,7 +163,8 @@ function saveSettings() {
       alertThreshold: alertThresholdEl.value,
       soundAlerts: soundAlertsEl.checked,
       visualAlerts: visualAlertsEl.checked,
-      targetDb: targetDb
+      targetDb: targetDb,
+      preset: activePreset
     }));
   } catch(e) {}
 }
@@ -178,6 +180,20 @@ function loadSettings() {
     if (s.visualAlerts !== undefined) visualAlertsEl.checked = s.visualAlerts;
     if (s.targetDb !== null && s.targetDb !== undefined) {
       setTimeout(() => setTargetDb(s.targetDb), 50);
+    }
+    // Restore the active preset tab (visual only — thresholds already loaded above)
+    if (s.preset && presets[s.preset]) {
+      activePreset = s.preset;
+    }
+    document.querySelectorAll('.preset-tab').forEach(tab => {
+      tab.classList.toggle('active', tab.dataset.preset === activePreset);
+    });
+  } catch(e) {}
+
+  // Theme
+  try {
+    if (localStorage.getItem('cnm_theme') === 'light') {
+      document.body.classList.add('theme-light');
     }
   } catch(e) {}
 
@@ -335,11 +351,20 @@ function updateSettingsDisplay() {
   }
 }
 
+// Manually adjusting a slider means the values no longer match a named preset.
+function markCustomPreset() {
+  if (activePreset === 'custom') return;
+  activePreset = 'custom';
+  document.querySelectorAll('.preset-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.preset === 'custom');
+  });
+}
+
 // Add event listeners
-sensitivityEl.addEventListener('input', () => { updateSettingsDisplay(); saveSettings(); });
-quietThresholdEl.addEventListener('input', () => { updateSettingsDisplay(); saveSettings(); });
-warningThresholdEl.addEventListener('input', () => { updateSettingsDisplay(); saveSettings(); });
-alertThresholdEl.addEventListener('input', () => { updateSettingsDisplay(); saveSettings(); });
+sensitivityEl.addEventListener('input', () => { markCustomPreset(); updateSettingsDisplay(); saveSettings(); });
+quietThresholdEl.addEventListener('input', () => { markCustomPreset(); updateSettingsDisplay(); saveSettings(); });
+warningThresholdEl.addEventListener('input', () => { markCustomPreset(); updateSettingsDisplay(); saveSettings(); });
+alertThresholdEl.addEventListener('input', () => { markCustomPreset(); updateSettingsDisplay(); saveSettings(); });
 soundAlertsEl.addEventListener('change', saveSettings);
 visualAlertsEl.addEventListener('change', saveSettings);
 
@@ -843,12 +868,20 @@ function updateHistoryChart(db) {
   }
 
   const dpr = window.devicePixelRatio || 1;
-  historyCanvas.width = historyCanvas.offsetWidth * dpr;
-  historyCanvas.height = historyCanvas.offsetHeight * dpr;
-  historyCtx.scale(dpr, dpr);
-
   const width = historyCanvas.offsetWidth;
   const height = historyCanvas.offsetHeight;
+
+  // Only reallocate the canvas backing store when the size (or DPR) actually
+  // changes — doing it every animation frame reallocates the bitmap and
+  // forces a layout read, which is wasteful and causes jank.
+  const pxW = Math.round(width * dpr);
+  const pxH = Math.round(height * dpr);
+  if (historyCanvas.width !== pxW || historyCanvas.height !== pxH) {
+    historyCanvas.width = pxW;
+    historyCanvas.height = pxH;
+  }
+  // Map CSS pixels → device pixels (also resets any prior transform each frame).
+  historyCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
   historyCtx.clearRect(0, 0, width, height);
 
@@ -929,6 +962,7 @@ function applyPreset(presetName) {
     tab.classList.toggle('active', tab.dataset.preset === presetName);
   });
 
+  activePreset = presetName;
   const preset = presets[presetName];
   if (preset) {
     sensitivityEl.value = preset.sensitivity;
@@ -937,11 +971,13 @@ function applyPreset(presetName) {
     alertThresholdEl.value = preset.alert;
     updateSettingsDisplay();
   }
+  saveSettings();
 }
 
 // ==================== Theme ====================
 function toggleTheme() {
-  document.body.classList.toggle('theme-light');
+  const isLight = document.body.classList.toggle('theme-light');
+  try { localStorage.setItem('cnm_theme', isLight ? 'light' : 'dark'); } catch(e) {}
 }
 
 // ==================== Fullscreen ====================
@@ -1700,10 +1736,11 @@ function updateEscalatingAlert(db) {
   }
   loudFrameCount++;
 
-  // Stage thresholds (frames at ~30fps sample rate effectively):
-  // Stage 1 warn   after ~2s  (60 frames)
-  // Stage 2 alarm  after ~8s  (240 frames)
-  // Stage 3 critical after ~20s (600 frames)
+  // Stage thresholds. The loop runs on requestAnimationFrame (~60fps), so the
+  // frame counts below map to roughly:
+  // Stage 1 warn     after ~1s   (60 frames)
+  // Stage 2 alarm    after ~4s   (240 frames)
+  // Stage 3 critical after ~10s  (600 frames)
   let newStage = 0;
   if (loudFrameCount > 600) newStage = 3;
   else if (loudFrameCount > 240) newStage = 2;
