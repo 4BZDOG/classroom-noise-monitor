@@ -19,7 +19,7 @@ category: project
 | Entry point | `index.html` → loads `styles.css` and `app.js` |
 | Source files | `app.js` (~1950 lines), `styles.css`, `index.html` |
 | State | Module-level globals in `app.js` — no framework, no store |
-| Persistence | `localStorage` only (keys: `cnm_settings`, `cnm_history`, `cnm_achievements`, `cnm_className`) |
+| Persistence | `localStorage` only (keys: `cnm_settings`, `cnm_history`, `cnm_achievements`, `cnm_className`, `cnm_theme`) |
 | Audio | Web Audio API (`AudioContext` + `AnalyserNode`) — mic only, nothing is recorded |
 
 ---
