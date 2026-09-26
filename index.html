@@ -8,6 +8,9 @@
   <meta name="description" content="A privacy-first classroom noise monitor. Live decibel levels, presets, challenges and a wall display to help keep your classroom at the perfect volume — all on-device, nothing recorded.">
   <meta name="theme-color" content="#00d9ff">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300d9ff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z'/%3E%3Cpath d='M19 10v2a7 7 0 0 1-14 0v-2'/%3E%3Cline x1='12' y1='19' x2='12' y2='23'/%3E%3Cline x1='8' y1='23' x2='16' y2='23'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 
@@ -84,6 +87,8 @@
   <div class="projector-overlay" id="projectorOverlay">
     <button class="proj-exit" onclick="closeProjector()">✕ Exit (W)</button>
     <div class="proj-class" id="projClass"></div>
+    <canvas class="proj-gauge-canvas" id="projGaugeCanvas" role="img" aria-label="Live noise gauge"></canvas>
+    <div class="legacy-hidden">
     <div class="proj-creature-body quiet" id="projCreature">
       <div class="proj-eyes">
         <div class="proj-eye"></div>
@@ -93,6 +98,7 @@
     </div>
     <div class="proj-db quiet" id="projDb">--<span>dB</span></div>
     <div class="proj-status quiet" id="projStatus">Ready</div>
+    </div>
     <div class="proj-score-wrap">
       <div class="proj-score-meta">
         <span>Class Score</span>
@@ -303,8 +309,13 @@
     </div>
 
     <div class="main-display">
-      <!-- Circle + Thermometer row -->
-      <div class="circle-thermo-row">
+      <!-- Creature gauge -->
+      <div class="gauge-wrap">
+        <canvas class="gauge-canvas" id="gaugeCanvas" role="img" aria-label="Live noise gauge showing level, spectrum and a creature that reacts to the noise"></canvas>
+        <div class="sr-only" id="gaugeLive" aria-live="polite" role="status"></div>
+      </div>
+      <!-- Legacy centrepiece: kept for its element references, not shown -->
+      <div class="circle-thermo-row legacy-hidden">
         <!-- Noise Thermometer -->
         <div class="thermometer-wrap">
           <div class="thermo-label">Level</div>
@@ -346,7 +357,7 @@
             <div class="trend-arrow" id="trendArrow"></div>
             <div class="db-value" id="dbValue">--</div>
             <div class="db-label">decibels</div>
-            <div class="status-text status-quiet" id="statusText" aria-live="polite" role="status">Ready to Start</div>
+            <div class="status-text status-quiet" id="statusText">Ready to Start</div>
             <div class="star-bar" id="starBar">
               <span class="star" data-star="1">⭐</span>
               <span class="star" data-star="2">⭐</span>
@@ -715,6 +726,7 @@
     </div>
   </div>
 
+  <script src="gauge.js"></script>
   <script src="app.js"></script>
 </body>
 

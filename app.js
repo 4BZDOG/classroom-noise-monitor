@@ -493,8 +493,8 @@ async function initAudio(stream) {
   }
 
   analyser = audioContext.createAnalyser();
-  analyser.fftSize = 256;
-  analyser.smoothingTimeConstant = 0.75;
+  analyser.fftSize = 512;
+  analyser.smoothingTimeConstant = 0.6;
 
   microphone = audioContext.createMediaStreamSource(stream);
   microphone.connect(analyser);
@@ -546,6 +546,7 @@ async function startMonitoring() {
   startBtn.setAttribute('aria-label', 'Stop monitoring');
   btnIcon.innerHTML = '<rect x="6" y="4" width="4" height="16" fill="currentColor"></rect><rect x="14" y="4" width="4" height="16" fill="currentColor"></rect>';
   noiseCircleEl.classList.add('monitoring');
+  Gauge.reset();
 
   // Show challenge section
   document.getElementById('challengeSection').classList.add('active');
@@ -553,8 +554,7 @@ async function startMonitoring() {
   // Start session timer
   sessionStartTime = Date.now();
   sessionTimerId = setInterval(updateSessionTime, 1000);
-
-  updateLoop();
+  // Per-frame work is driven by the gauge's render loop via updateLoop(db).
 }
 
 function stopMonitoring() {
@@ -1094,10 +1094,11 @@ function playSuccessSound() {
 }
 
 // ==================== Main Loop ====================
-function updateLoop() {
+// Called once per frame by the gauge with its smoothed level, so the arc,
+// creature, number and the rest of the app always agree on the zone.
+function updateLoop(db) {
   if (!isMonitoring) return;
 
-  const db = calculateDB();
   updateNoiseDisplay(db);
   updateVisualizer();
   updateStats(db);
@@ -1106,9 +1107,28 @@ function updateLoop() {
   updateThermometer(db);
   updateProjector(db);
   updateEscalatingAlert(db);
-
-  animationId = requestAnimationFrame(updateLoop);
 }
+
+// ==================== Creature Gauge wiring ====================
+Gauge.init({
+  canvases: [document.getElementById('gaugeCanvas'), document.getElementById('projGaugeCanvas')],
+  liveRegion: document.getElementById('gaugeLive'),
+  getAnalyser: () => (isMonitoring ? analyser : null),
+  // Sensitivity slider acts as input gain (1.5x = unity)
+  getGain: () => parseFloat(sensitivityEl.value) / 1.5,
+  getThresholds: () => ({
+    quiet: parseInt(quietThresholdEl.value),
+    alert: parseInt(alertThresholdEl.value)
+  }),
+  onLevel: updateLoop,
+  onHidden: () => {
+    // Release the microphone whenever the view is hidden
+    if (isMonitoring) {
+      stopMonitoring();
+      showToast('Monitoring paused while the tab was hidden. Press Start to resume.', 'info', 4000);
+    }
+  }
+});
 
 // ==================== Toast ====================
 function showToast(message, type = 'info', duration = 2800) {
