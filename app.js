@@ -57,7 +57,6 @@ let className = '';
 
 // Ambient colour mode
 let ambientMode = false;
-let smoothedDb = 40; // exponential moving average for display
 
 // Session history (persisted)
 let sessionHistory = [];
@@ -535,7 +534,6 @@ async function startMonitoring() {
   }
 
   // Reset per-session transient state
-  smoothedDb = 40;
   recentReadings = [];
   trendFrameCount = 0;
 
@@ -686,25 +684,6 @@ function resetStats() {
 }
 
 // ==================== Calculations ====================
-function calculateDB() {
-  analyser.getByteFrequencyData(dataArray);
-
-  let sum = 0;
-  for (let i = 0; i < dataArray.length; i++) {
-    sum += dataArray[i] * dataArray[i];
-  }
-  const rms = Math.sqrt(sum / dataArray.length);
-
-  const sensitivity = parseFloat(sensitivityEl.value);
-  const rawDb = Math.min(120, Math.max(20, (rms * sensitivity * 0.4) + 20));
-
-  // Exponential moving average — faster rise, slower fall for natural feel
-  const alpha = rawDb > smoothedDb ? 0.25 : 0.12;
-  smoothedDb = smoothedDb + alpha * (rawDb - smoothedDb);
-
-  return Math.round(smoothedDb);
-}
-
 function updateProgressRing(db) {
   const maxDb = 100;
   const percentage = Math.min(db / maxDb, 1);

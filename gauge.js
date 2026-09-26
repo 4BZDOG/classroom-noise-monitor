@@ -53,6 +53,22 @@ class NoiseGauge {
     }
     this.w = cw; this.h = ch;
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // Size-dependent resources are built here, not per frame
+    const ctx = this.ctx, cx = cw / 2, cy = ch / 2, R = Math.min(cw, ch) * 0.33;
+    const far = Math.max(cw, ch) * 0.75;
+    this.bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, far);
+    this.bg.addColorStop(0, '#1a2233');
+    this.bg.addColorStop(1, '#0c111c');
+    this.wash = ctx.createRadialGradient(cx, cy, R * 0.8, cx, cy, far);
+    this.wash.addColorStop(0, 'rgba(255,107,107,0)');
+    this.wash.addColorStop(1, 'rgba(255,107,107,1)');
+    const mono = "'JetBrains Mono', ui-monospace, monospace";
+    this.fontNum = `600 ${0.26 * R}px ${mono}`;
+    this.fontSuf = `600 ${0.104 * R}px ${mono}`;
+    this.fontStatus = `600 ${Math.max(11, 0.1 * R)}px ${mono}`;
+    this.fontLabel = `600 ${Math.max(10, 0.055 * R)}px ${mono}`;
+    this.fontSmall = `600 10px ${mono}`;
+    this.fontZ = `600 ${0.16 * R}px ${mono}`;
   }
 
   // s = { level, bars, history, histHead, quiet, alert, t, alertFor, reduced, label }
@@ -66,20 +82,16 @@ class NoiseGauge {
     const t = s.t;
 
     // Background
-    const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h) * 0.75);
-    bg.addColorStop(0, '#1a2233');
-    bg.addColorStop(1, '#0c111c');
-    ctx.fillStyle = bg;
+    ctx.fillStyle = this.bg;
     ctx.fillRect(0, 0, w, h);
 
     // Alert wash
     if (s.alertFor > 0.3) {
       const a = s.reduced ? 0.2 : 0.18 + 0.1 * Math.sin(t * 10);
-      const v = ctx.createRadialGradient(cx, cy, R * 0.8, cx, cy, Math.max(w, h) * 0.75);
-      v.addColorStop(0, 'rgba(255,107,107,0)');
-      v.addColorStop(1, `rgba(255,107,107,${a.toFixed(3)})`);
-      ctx.fillStyle = v;
+      ctx.globalAlpha = a;
+      ctx.fillStyle = this.wash;
       ctx.fillRect(0, 0, w, h);
+      ctx.globalAlpha = 1;
     }
 
     // Spectrum ring — batched into one path per zone colour
@@ -133,6 +145,9 @@ class NoiseGauge {
     this.tick(cx, cy, R, s.quiet, ZONES[1].solid);
     this.tick(cx, cy, R, s.alert, ZONES[2].solid);
 
+    // Very calm room: the creature gets drowsy and little z's drift up
+    if (s.level < s.quiet - 8) this.drawZzz(cx + 0.4 * R, cy - 0.5 * R, R, t, s.reduced);
+
     // Creature
     this.drawCreature(cx, cy - 0.14 * R, 0.44 * R, zi, s.level, t, s.reduced);
 
@@ -140,34 +155,53 @@ class NoiseGauge {
     const num = Math.round(s.level);
     const numSize = 0.26 * R;
     ctx.textBaseline = 'middle';
-    ctx.font = `600 ${numSize}px 'JetBrains Mono', ui-monospace, monospace`;
+    ctx.font = this.fontNum;
     const numW = ctx.measureText(num).width;
-    ctx.font = `600 ${numSize * 0.4}px 'JetBrains Mono', ui-monospace, monospace`;
+    ctx.font = this.fontSuf;
     const sufW = ctx.measureText(' dB').width;
     const x0 = cx - (numW + sufW) / 2;
     ctx.textAlign = 'left';
     ctx.fillStyle = '#f4f7fb';
-    ctx.font = `600 ${numSize}px 'JetBrains Mono', ui-monospace, monospace`;
+    ctx.font = this.fontNum;
     ctx.fillText(num, x0, cy + 0.68 * R);
     ctx.globalAlpha = 0.6;
-    ctx.font = `600 ${numSize * 0.4}px 'JetBrains Mono', ui-monospace, monospace`;
+    ctx.font = this.fontSuf;
     ctx.fillText(' dB', x0 + numW, cy + 0.68 * R + numSize * 0.16);
     ctx.globalAlpha = 1;
 
     // Status
     ctx.textAlign = 'center';
     ctx.fillStyle = zone.solid;
-    ctx.font = `600 ${Math.max(11, 0.1 * R)}px 'JetBrains Mono', ui-monospace, monospace`;
+    ctx.font = this.fontStatus;
     ctx.fillText(zone.status, cx, cy + 1.0 * R);
 
     if (s.label) {
       ctx.fillStyle = 'rgba(255,255,255,.45)';
-      ctx.font = `600 ${Math.max(10, 0.055 * R)}px 'JetBrains Mono', ui-monospace, monospace`;
+      ctx.font = this.fontLabel;
       ctx.fillText(s.label, cx, Math.max(14, cy - 1.62 * R));
     }
 
     if (w > 380) this.drawThermometer(w, h, R, s, zone);
     if (w > 480) this.drawSparkline(w, R, s);
+  }
+
+  drawZzz(x, y, R, t, reduced) {
+    const ctx = this.ctx;
+    ctx.font = this.fontZ;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = ZONES[0].light;
+    for (let i = 0; i < 3; i++) {
+      const p = reduced ? i / 3 : (t * 0.35 + i / 3) % 1;
+      ctx.globalAlpha = reduced ? 0.5 : Math.sin(p * Math.PI) * 0.8;
+      const sc = 0.6 + p * 0.6;
+      ctx.save();
+      ctx.translate(x + p * 0.18 * R + (reduced ? 0 : Math.sin(t * 2 + i) * 0.04 * R), y - p * 0.28 * R);
+      ctx.scale(sc, sc);
+      ctx.fillText('z', 0, 0);
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
   }
 
   tick(cx, cy, R, db, color) {
@@ -332,7 +366,7 @@ class NoiseGauge {
     }
     ctx.stroke();
     ctx.fillStyle = 'rgba(255,255,255,.4)';
-    ctx.font = `600 10px 'JetBrains Mono', ui-monospace, monospace`;
+    ctx.font = this.fontSmall;
     ctx.textAlign = 'right';
     ctx.textBaseline = 'alphabetic';
     ctx.fillText('LAST 10s', x + sw, y + sh + 20);
@@ -434,7 +468,8 @@ const Gauge = (() => {
     }
 
     const zi = gaugeZone(level, th.quiet, th.alert);
-    if (zi !== lastZone) {
+    if (!an) lastZone = -1;
+    else if (zi !== lastZone) {
       lastZone = zi;
       if (opts.liveRegion) opts.liveRegion.textContent = ZONES[zi].status;
     }
