@@ -13,8 +13,14 @@ session summaries are saved (in `localStorage`, on your own machine).
 
 ## ✨ Features
 
-- **Live level display** — animated dB readout, colour-coded creature, progress
-  ring, thermometer and frequency visualizer.
+- **Creature gauge** — one canvas instrument: 270° level arc, spectrum ring, a
+  creature that reacts to the noise, a big dB number, thermometer and 10 s
+  sparkline. Shows a preview animation before the mic is allowed.
+- **Lesson Timeline** — a retro LED graphic-equaliser (or pitch heat map) with
+  time across the screen, recording one level per second for the whole lesson.
+  Full screen (`L`), hover for details, save as PNG or per-second CSV.
+- **Faces on/off** — turn the animated creature off (`C`) for a calmer,
+  less distracting display; the setting is remembered.
 - **Presets** — Custom, Library, Group Work, Presentation and Testing, each with
   sensible thresholds and mic sensitivity.
 - **Adjustable thresholds** — set Quiet / Warning / Alert levels, or use
@@ -43,7 +49,7 @@ session summaries are saved (in `localStorage`, on your own machine).
 ### Keyboard shortcuts
 
 `Space` start/stop · `F` fullscreen · `T` theme · `A` attention · `W` wall
-display · `R` reset · `P` report · `E` export CSV · `?` help · `Esc` close
+display · `L` lesson timeline · `C` faces on/off · `R` reset · `P` report · `E` export CSV · `?` help · `Esc` close
 overlays.
 
 ## 🛠️ Local development
@@ -66,7 +72,9 @@ Any static server works (e.g. `npx serve`).
 |------|---------|
 | `index.html` | Markup and DOM structure |
 | `styles.css` | All styling, themes and CSS custom properties |
-| `app.js` | All logic — audio, rendering loop, persistence (vanilla ES6, no modules) |
+| `gauge.js` | Creature gauge renderer and the shared render loop |
+| `timeline.js` | Lesson Timeline recorder and retro equaliser / heat map renderer |
+| `app.js` | App logic — audio, thresholds, stats, persistence (vanilla ES6, no modules) |
 | `.github/workflows/deploy.yml` | GitHub Pages deployment |
 | `.claude/skills/noise-monitor-dev.md` | Developer guide for working on this project |
 

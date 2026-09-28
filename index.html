@@ -10,7 +10,7 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300d9ff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z'/%3E%3Cpath d='M19 10v2a7 7 0 0 1-14 0v-2'/%3E%3Cline x1='12' y1='19' x2='12' y2='23'/%3E%3Cline x1='8' y1='23' x2='16' y2='23'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@600&family=VT323&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 
@@ -86,6 +86,7 @@
   <!-- Projector / Wall Display Mode -->
   <div class="projector-overlay" id="projectorOverlay">
     <button class="proj-exit" onclick="closeProjector()">✕ Exit (W)</button>
+    <button class="proj-faces faces-toggle" aria-pressed="true" onclick="toggleFaces()" title="Show or hide the animated creature (C)">😊 Faces on</button>
     <div class="proj-class" id="projClass"></div>
     <canvas class="proj-gauge-canvas" id="projGaugeCanvas" role="img" aria-label="Live noise gauge"></canvas>
     <div class="legacy-hidden">
@@ -164,6 +165,8 @@
         <div class="shortcut-row"><span class="kbd">T</span><span>Toggle theme</span></div>
         <div class="shortcut-row"><span class="kbd">A</span><span>Attention signal</span></div>
         <div class="shortcut-row"><span class="kbd">W</span><span>Wall display</span></div>
+        <div class="shortcut-row"><span class="kbd">L</span><span>Lesson timeline full screen</span></div>
+        <div class="shortcut-row"><span class="kbd">C</span><span>Creature faces on / off</span></div>
         <div class="shortcut-row"><span class="kbd">R</span><span>Reset stats</span></div>
         <div class="shortcut-row"><span class="kbd">P</span><span>Session report</span></div>
         <div class="shortcut-row"><span class="kbd">E</span><span>Export CSV</span></div>
@@ -378,6 +381,28 @@
           <div class="ring"></div>
         </div>
       </div>
+
+      <!-- Lesson timeline: retro LED equaliser / heat map over the whole lesson -->
+      <section class="timeline-card" id="timelineCard" aria-labelledby="timelineTitle">
+        <div class="timeline-toolbar">
+          <h3 id="timelineTitle">📼 Lesson Timeline</h3>
+          <div class="tl-seg" role="group" aria-label="Timeline view">
+            <button class="tl-btn active" data-tl-mode="levels" aria-pressed="true" onclick="setTimelineMode('levels')">▮▮ Levels</button>
+            <button class="tl-btn" data-tl-mode="heat" aria-pressed="false" onclick="setTimelineMode('heat')">▦ Heat map</button>
+          </div>
+          <div class="tl-actions">
+            <button class="tl-btn faces-toggle" aria-pressed="true" onclick="toggleFaces()" title="Show or hide the animated creature (C)">😊 Faces on</button>
+            <button class="tl-btn" onclick="saveTimelinePNG()" title="Save the timeline as an image">⤓ Image</button>
+            <button class="tl-btn" onclick="saveTimelineCSV()" title="Download the per-second levels as CSV">⤓ CSV</button>
+            <button class="tl-btn tl-fs-btn" id="tlFsBtn" onclick="toggleTimelineFullscreen()" title="Full screen timeline (L)">⛶ Full screen</button>
+          </div>
+        </div>
+        <div class="timeline-stage">
+          <canvas class="timeline-canvas" id="timelineCanvas" role="img" aria-label="Lesson timeline: nothing recorded yet"></canvas>
+          <div class="tl-tooltip" id="tlTooltip" hidden></div>
+        </div>
+        <p class="timeline-note">Records one level reading per second while monitoring — never audio. The whole lesson fits across the screen; dashed lines mark pauses.</p>
+      </section>
 
       <!-- Visualizer with clickable target line -->
       <div class="visualizer-wrapper">
@@ -727,6 +752,7 @@
   </div>
 
   <script src="gauge.js"></script>
+  <script src="timeline.js"></script>
   <script src="app.js"></script>
 </body>
 
