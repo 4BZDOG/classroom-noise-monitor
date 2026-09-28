@@ -2646,3 +2646,83 @@ body.ambient.ambient-loud {
   .gauge-wrap { border-radius: 18px; }
   .gauge-canvas { height: clamp(300px, 90vw, 420px); }
 }
+
+/* ==================== Lesson Timeline ==================== */
+.timeline-card {
+  position: relative;
+  margin: 0 0 1.5rem;
+  padding: 14px;
+  border-radius: 24px;
+  background: linear-gradient(180deg, #151b2b, #0a0e18);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .35), inset 0 0 0 1px rgba(255, 255, 255, .06);
+  color: #e8edf7;
+}
+.timeline-toolbar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+  margin-bottom: 10px;
+}
+.timeline-toolbar h3 {
+  margin: 0 auto 0 4px;
+  font-family: 'VT323', ui-monospace, monospace;
+  font-size: 1.6rem; font-weight: 400; letter-spacing: 1px;
+  color: #ffd27a;
+  text-shadow: 0 0 10px rgba(255, 176, 40, .45);
+}
+.tl-seg, .tl-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.tl-seg { padding: 3px; border-radius: 12px; background: rgba(255, 255, 255, .05); }
+.tl-btn, .proj-faces {
+  font: 600 .8rem/1 'JetBrains Mono', ui-monospace, monospace;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  background: rgba(255, 255, 255, .05);
+  color: rgba(232, 237, 247, .8);
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.tl-seg .tl-btn { border-color: transparent; background: transparent; }
+.tl-btn:hover, .proj-faces:hover { background: rgba(255, 255, 255, .12); color: #fff; }
+.tl-btn.active {
+  background: #ffb020; color: #1a1206; border-color: #ffb020;
+  box-shadow: 0 0 12px rgba(255, 176, 32, .45);
+}
+.tl-btn:focus-visible, .proj-faces:focus-visible { outline: 2px solid #ffd27a; outline-offset: 2px; }
+.timeline-stage { position: relative; }
+.timeline-canvas {
+  display: block; width: 100%;
+  height: clamp(260px, 44vh, 460px);
+  border-radius: 14px;
+  background: #06080f;
+  cursor: crosshair;
+}
+.tl-tooltip {
+  position: absolute; z-index: 5; pointer-events: none;
+  padding: 8px 10px; border-radius: 8px;
+  font: 500 .8rem/1.45 'JetBrains Mono', ui-monospace, monospace;
+  background: rgba(8, 11, 20, .94); color: #e8edf7;
+  border: 1px solid rgba(255, 255, 255, .15);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .4);
+  white-space: nowrap;
+}
+.tl-tip-zone { color: var(--z); font-weight: 700; }
+.timeline-note { margin: 10px 4px 0; font-size: .8rem; color: rgba(232, 237, 247, .5); }
+
+/* Full screen (native, or the fixed-overlay fallback) */
+.timeline-card:fullscreen, .timeline-card.tl-fullscreen {
+  display: flex; flex-direction: column;
+  width: 100vw; height: 100vh; margin: 0; border-radius: 0; padding: 12px 16px;
+  background: #06080f;
+}
+.timeline-card.tl-fullscreen { position: fixed; inset: 0; z-index: 9000; }
+.timeline-card:fullscreen .timeline-stage, .timeline-card.tl-fullscreen .timeline-stage { flex: 1 1 auto; min-height: 0; }
+.timeline-card:fullscreen .timeline-canvas, .timeline-card.tl-fullscreen .timeline-canvas { height: 100%; border-radius: 10px; }
+.timeline-card:fullscreen .timeline-note, .timeline-card.tl-fullscreen .timeline-note { display: none; }
+
+.proj-faces { position: fixed; top: 18px; right: 130px; z-index: 8001; border-radius: 16px; }
+
+@media (max-width: 600px) {
+  .timeline-card { padding: 10px; border-radius: 18px; }
+  .timeline-toolbar h3 { flex-basis: 100%; }
+  .tl-btn { padding: 7px 9px; font-size: .72rem; }
+  .timeline-canvas { height: 300px; }
+}

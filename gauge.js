@@ -69,6 +69,8 @@ class NoiseGauge {
     this.fontLabel = `600 ${Math.max(10, 0.055 * R)}px ${mono}`;
     this.fontSmall = `600 10px ${mono}`;
     this.fontZ = `600 ${0.16 * R}px ${mono}`;
+    this.fontNumBig = `600 ${0.46 * R}px ${mono}`;
+    this.fontSufBig = `600 ${0.18 * R}px ${mono}`;
   }
 
   // s = { level, bars, history, histHead, quiet, alert, t, alertFor, reduced, label }
@@ -145,28 +147,31 @@ class NoiseGauge {
     this.tick(cx, cy, R, s.quiet, ZONES[1].solid);
     this.tick(cx, cy, R, s.alert, ZONES[2].solid);
 
-    // Very calm room: the creature gets drowsy and little z's drift up
-    if (s.level < s.quiet - 8) this.drawZzz(cx + 0.4 * R, cy - 0.5 * R, R, t, s.reduced);
+    if (s.faces) {
+      // Very calm room: the creature gets drowsy and little z's drift up
+      if (s.level < s.quiet - 8) this.drawZzz(cx + 0.4 * R, cy - 0.5 * R, R, t, s.reduced);
+      this.drawCreature(cx, cy - 0.14 * R, 0.44 * R, zi, s.level, t, s.reduced);
+    }
 
-    // Creature
-    this.drawCreature(cx, cy - 0.14 * R, 0.44 * R, zi, s.level, t, s.reduced);
-
-    // dB number
+    // dB number (fills the centre when the creature is switched off)
     const num = Math.round(s.level);
-    const numSize = 0.26 * R;
+    const numSize = (s.faces ? 0.26 : 0.46) * R;
+    const numY = cy + (s.faces ? 0.68 : 0.12) * R;
+    const fNum = s.faces ? this.fontNum : this.fontNumBig;
+    const fSuf = s.faces ? this.fontSuf : this.fontSufBig;
     ctx.textBaseline = 'middle';
-    ctx.font = this.fontNum;
+    ctx.font = fNum;
     const numW = ctx.measureText(num).width;
-    ctx.font = this.fontSuf;
+    ctx.font = fSuf;
     const sufW = ctx.measureText(' dB').width;
     const x0 = cx - (numW + sufW) / 2;
     ctx.textAlign = 'left';
     ctx.fillStyle = '#f4f7fb';
-    ctx.font = this.fontNum;
-    ctx.fillText(num, x0, cy + 0.68 * R);
+    ctx.font = fNum;
+    ctx.fillText(num, x0, numY);
     ctx.globalAlpha = 0.6;
-    ctx.font = this.fontSuf;
-    ctx.fillText(' dB', x0 + numW, cy + 0.68 * R + numSize * 0.16);
+    ctx.font = fSuf;
+    ctx.fillText(' dB', x0 + numW, numY + numSize * 0.16);
     ctx.globalAlpha = 1;
 
     // Status
@@ -398,7 +403,8 @@ const Gauge = (() => {
   let timeBuf = null, freqBuf = null;
   let lastZone = -1;
   const gauges = [];
-  const state = { level: 40, bars, history, histHead: 0, quiet: 40, alert: 75, t: 0, alertFor: 0, reduced: false, label: '' };
+  const state = { level: 40, bars, history, histHead: 0, quiet: 40, alert: 75, t: 0, alertFor: 0, reduced: false, label: '', faces: true, live: false };
+  const renderers = [];
   const rmq = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
   let opts = null;
 
@@ -459,6 +465,8 @@ const Gauge = (() => {
     state.t = t; state.alertFor = alertFor;
     state.reduced = !!(rmq && rmq.matches);
     state.label = an ? '' : 'PREVIEW · PRESS START TO LISTEN';
+    state.faces = opts.getFaces ? opts.getFaces() : true;
+    state.live = !!an;
 
     for (let i = 0; i < gauges.length; i++) {
       const g = gauges[i];
@@ -466,6 +474,8 @@ const Gauge = (() => {
       if (g.w !== g.canvas.clientWidth || g.h !== g.canvas.clientHeight) g.resize();
       g.draw(state);
     }
+
+    for (let i = 0; i < renderers.length; i++) renderers[i].frame(state, dt);
 
     const zi = gaugeZone(level, th.quiet, th.alert);
     if (!an) lastZone = -1;
@@ -494,6 +504,8 @@ const Gauge = (() => {
       window.addEventListener('resize', () => gauges.forEach(g => g.resize()));
       start();
     },
+    // Extra views (e.g. the lesson timeline) drawn in the same loop: r.frame(state, dt)
+    addRenderer(r) { renderers.push(r); },
     reset() { level = 40; alertFor = 0; history.fill(40); },
     get level() { return level; }
   };

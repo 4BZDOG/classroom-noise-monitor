@@ -677,6 +677,8 @@ function resetStats() {
   avgGapValueEl.className = 'avg-target-gap-value';
   avgLineEl.style.display = 'none';
 
+  lessonTimeline.clear();
+
   // Clear history chart
   if (historyCtx && historyCanvas) {
     historyCtx.clearRect(0, 0, historyCanvas.width, historyCanvas.height);
@@ -1089,7 +1091,26 @@ function updateLoop(db) {
 }
 
 // ==================== Creature Gauge wiring ====================
+let facesOn = true;
+try { facesOn = localStorage.getItem('cnm_faces') !== 'off'; } catch (e) {}
+
+function syncFacesButtons() {
+  document.querySelectorAll('.faces-toggle').forEach(b => {
+    b.setAttribute('aria-pressed', String(facesOn));
+    b.textContent = facesOn ? '😊 Faces on' : '😶 Faces off';
+  });
+}
+
+function toggleFaces() {
+  facesOn = !facesOn;
+  try { localStorage.setItem('cnm_faces', facesOn ? 'on' : 'off'); } catch (e) {}
+  syncFacesButtons();
+  showToast(facesOn ? 'Animated creature on' : 'Animated creature off — calmer display', 'info', 1800);
+}
+syncFacesButtons();
+
 Gauge.init({
+  getFaces: () => facesOn,
   canvases: [document.getElementById('gaugeCanvas'), document.getElementById('projGaugeCanvas')],
   liveRegion: document.getElementById('gaugeLive'),
   getAnalyser: () => (isMonitoring ? analyser : null),
@@ -1932,12 +1953,16 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'a' || e.key === 'A') triggerAttention();
   if (e.key === 'p' || e.key === 'P') showReportModal();
   if (e.key === 'w' || e.key === 'W') projectorOpen ? closeProjector() : openProjector();
+  if (e.key === 'l' || e.key === 'L') toggleTimelineFullscreen();
+  if (e.key === 'c' || e.key === 'C') toggleFaces();
   if (e.key === '?' || e.key === '/') showShortcutsModal();
   if (e.key === 'Escape') {
     dismissAttention();
     closeReportModal();
     closeProjector();
     closeShortcutsModal();
+    const tlCard = document.getElementById('timelineCard');
+    if (tlCard.classList.contains('tl-fullscreen')) { tlCard.classList.remove('tl-fullscreen'); syncTimelineFs(); }
     if (document.body.classList.contains('fullscreen')) toggleFullscreen();
   }
 });
@@ -1987,3 +2012,70 @@ window.addEventListener('resize', () => {
     updateHistoryChart(historyData[historyData.length - 1]);
   }
 });
+
+// ==================== Lesson Timeline ====================
+const lessonTimeline = new LessonTimeline(
+  document.getElementById('timelineCanvas'),
+  document.getElementById('tlTooltip')
+);
+lessonTimeline.getTitle = () => (className ? className.toUpperCase() + ' · TIMELINE' : 'LESSON TIMELINE');
+Gauge.addRenderer(lessonTimeline);
+// Keep recording every frame, but only paint the timeline while it is on screen
+lessonTimeline.shouldDraw = () => !projectorOpen || document.fullscreenElement === document.getElementById('timelineCard');
+if ('IntersectionObserver' in window) {
+  new IntersectionObserver(([en]) => { lessonTimeline.onScreen = en.isIntersecting; })
+    .observe(document.getElementById('timelineCard'));
+}
+
+function setTimelineMode(mode) {
+  lessonTimeline.mode = mode;
+  document.querySelectorAll('[data-tl-mode]').forEach(b => {
+    const on = b.dataset.tlMode === mode;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-pressed', String(on));
+  });
+  try { localStorage.setItem('cnm_tlMode', mode); } catch (e) {}
+}
+try { const m = localStorage.getItem('cnm_tlMode'); if (m === 'heat') setTimelineMode('heat'); } catch (e) {}
+
+function toggleTimelineFullscreen() {
+  const card = document.getElementById('timelineCard');
+  if (document.fullscreenElement === card) { document.exitFullscreen(); return; }
+  if (card.classList.contains('tl-fullscreen')) { card.classList.remove('tl-fullscreen'); syncTimelineFs(); return; }
+  if (card.requestFullscreen) {
+    card.requestFullscreen().catch(() => { card.classList.add('tl-fullscreen'); syncTimelineFs(); });
+  } else {
+    card.classList.add('tl-fullscreen'); // fallback: fixed overlay
+    syncTimelineFs();
+  }
+}
+
+function syncTimelineFs() {
+  const card = document.getElementById('timelineCard');
+  const on = document.fullscreenElement === card || card.classList.contains('tl-fullscreen');
+  document.getElementById('tlFsBtn').textContent = on ? '✕ Exit full screen' : '⛶ Full screen';
+  document.body.style.overflow = on ? 'hidden' : (projectorOpen ? 'hidden' : '');
+}
+document.addEventListener('fullscreenchange', syncTimelineFs);
+
+function timelineFileName(ext) {
+  const d = new Date();
+  const stamp = d.toISOString().slice(0, 16).replace('T', '_').replace(':', '-');
+  const cls = (className || 'lesson').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase();
+  return `${cls || 'lesson'}-timeline-${stamp}.${ext}`;
+}
+
+function saveTimelinePNG() {
+  if (!lessonTimeline.count) { showToast('Nothing recorded yet — press Start first.', 'info', 2200); return; }
+  lessonTimeline.savePNG(timelineFileName('png'));
+}
+
+function saveTimelineCSV() {
+  if (!lessonTimeline.count) { showToast('Nothing recorded yet — press Start first.', 'info', 2200); return; }
+  const csv = lessonTimeline.toCSV(parseInt(quietThresholdEl.value), parseInt(alertThresholdEl.value));
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = timelineFileName('csv');
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
